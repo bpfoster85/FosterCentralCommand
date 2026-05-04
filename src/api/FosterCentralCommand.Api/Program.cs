@@ -1,5 +1,5 @@
-using Microsoft.EntityFrameworkCore;
-using FosterCentralCommand.Api.Data;
+using Microsoft.Azure.Cosmos;
+using FosterCentralCommand.Api.Repositories;
 using FosterCentralCommand.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,11 +21,24 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Database
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? "Host=localhost;Database=fostercc;Username=postgres;Password=postgres";
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(connectionString));
+// CosmosDB
+var cosmosOptions = builder.Configuration
+    .GetSection(CosmosDbOptions.SectionName)
+    .Get<CosmosDbOptions>() ?? new CosmosDbOptions();
+
+builder.Services.AddSingleton(cosmosOptions);
+builder.Services.AddSingleton(_ => new CosmosClient(
+    cosmosOptions.AccountEndpoint,
+    cosmosOptions.AccountKey,
+    new CosmosClientOptions
+    {
+        SerializerOptions = new CosmosSerializationOptions
+        {
+            PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
+        }
+    }));
+builder.Services.AddScoped<IProfileRepository, CosmosProfileRepository>();
+builder.Services.AddScoped<IShoppingListRepository, CosmosShoppingListRepository>();
 
 // Redis Cache
 var redisConnectionString = builder.Configuration.GetConnectionString("Redis")
@@ -41,19 +54,13 @@ builder.Services.AddScoped<ICalendarService, CalendarService>();
 
 var app = builder.Build();
 
-// Apply migrations on startup
+// Initialize CosmosDB containers on startup
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    try
-    {
-        db.Database.Migrate();
-    }
-    catch (Exception ex)
-    {
-        var log = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        log.LogWarning(ex, "Database migration failed – database may not be available yet.");
-    }
+    var cosmosClient = scope.ServiceProvider.GetRequiredService<CosmosClient>();
+    var options = scope.ServiceProvider.GetRequiredService<CosmosDbOptions>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    await CosmosInitializer.InitializeAsync(cosmosClient, options, logger);
 }
 
 if (app.Environment.IsDevelopment())

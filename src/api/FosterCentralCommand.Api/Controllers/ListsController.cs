@@ -1,32 +1,25 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using FosterCentralCommand.Api.Data;
 using FosterCentralCommand.Api.DTOs;
 using FosterCentralCommand.Api.Models;
+using FosterCentralCommand.Api.Repositories;
 
 namespace FosterCentralCommand.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ListsController(AppDbContext db) : ControllerBase
+public class ListsController(IShoppingListRepository listRepo) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ShoppingListDto>>> GetAll()
     {
-        var lists = await db.ShoppingLists
-            .Include(l => l.Items)
-            .OrderBy(l => l.Title)
-            .ToListAsync();
-
+        var lists = await listRepo.GetAllAsync();
         return Ok(lists.Select(MapToDto));
     }
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ShoppingListDto>> GetById(Guid id)
     {
-        var list = await db.ShoppingLists
-            .Include(l => l.Items)
-            .FirstOrDefaultAsync(l => l.Id == id);
+        var list = await listRepo.GetByIdAsync(id.ToString());
         return list == null ? NotFound() : Ok(MapToDto(list));
     }
 
@@ -38,17 +31,16 @@ public class ListsController(AppDbContext db) : ControllerBase
             Title = request.Title,
             Description = request.Description,
             IsFavorite = request.IsFavorite,
-            CreatedByProfileId = request.CreatedByProfileId
+            CreatedByProfileId = request.CreatedByProfileId.ToString()
         };
-        db.ShoppingLists.Add(list);
-        await db.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetById), new { id = list.Id }, MapToDto(list));
+        var created = await listRepo.CreateAsync(list);
+        return CreatedAtAction(nameof(GetById), new { id = Guid.Parse(created.Id) }, MapToDto(created));
     }
 
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<ShoppingListDto>> Update(Guid id, [FromBody] UpdateListRequest request)
     {
-        var list = await db.ShoppingLists.Include(l => l.Items).FirstOrDefaultAsync(l => l.Id == id);
+        var list = await listRepo.GetByIdAsync(id.ToString());
         if (list == null) return NotFound();
 
         if (request.Title != null) list.Title = request.Title;
@@ -56,29 +48,28 @@ public class ListsController(AppDbContext db) : ControllerBase
         if (request.IsFavorite.HasValue) list.IsFavorite = request.IsFavorite.Value;
         list.UpdatedAt = DateTime.UtcNow;
 
-        await db.SaveChangesAsync();
-        return Ok(MapToDto(list));
+        var updated = await listRepo.UpdateAsync(list);
+        return Ok(MapToDto(updated));
     }
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var list = await db.ShoppingLists.FindAsync(id);
+        var list = await listRepo.GetByIdAsync(id.ToString());
         if (list == null) return NotFound();
-        db.ShoppingLists.Remove(list);
-        await db.SaveChangesAsync();
+        await listRepo.DeleteAsync(id.ToString());
         return NoContent();
     }
 
     [HttpPatch("{id:guid}/favorite")]
     public async Task<ActionResult<ShoppingListDto>> ToggleFavorite(Guid id)
     {
-        var list = await db.ShoppingLists.Include(l => l.Items).FirstOrDefaultAsync(l => l.Id == id);
+        var list = await listRepo.GetByIdAsync(id.ToString());
         if (list == null) return NotFound();
         list.IsFavorite = !list.IsFavorite;
         list.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync();
-        return Ok(MapToDto(list));
+        var updated = await listRepo.UpdateAsync(list);
+        return Ok(MapToDto(updated));
     }
 
     // --- List Items ---
@@ -86,56 +77,43 @@ public class ListsController(AppDbContext db) : ControllerBase
     [HttpGet("{listId:guid}/items")]
     public async Task<ActionResult<IEnumerable<ListItemDto>>> GetItems(Guid listId)
     {
-        var items = await db.ListItems
-            .Include(i => i.Attendees)
-            .Where(i => i.ListId == listId)
-            .OrderBy(i => i.CreatedAt)
-            .ToListAsync();
-        return Ok(items.Select(MapItemToDto));
+        var list = await listRepo.GetByIdAsync(listId.ToString());
+        if (list == null) return NotFound();
+        return Ok(list.Items.OrderBy(i => i.CreatedAt).Select(MapItemToDto));
     }
 
     [HttpPost("{listId:guid}/items")]
     public async Task<ActionResult<ListItemDto>> CreateItem(Guid listId, [FromBody] CreateListItemRequest request)
     {
-        var list = await db.ShoppingLists.FindAsync(listId);
+        var list = await listRepo.GetByIdAsync(listId.ToString());
         if (list == null) return NotFound();
 
         var item = new ListItem
         {
-            ListId = listId,
+            ListId = listId.ToString(),
             Title = request.Title,
             Description = request.Description,
             IsChecked = request.IsChecked,
             StartDate = request.StartDate,
             EndDate = request.EndDate,
-            CreatedByProfileId = request.CreatedByProfileId
+            CreatedByProfileId = request.CreatedByProfileId.ToString(),
+            AttendeeProfileIds = request.AttendeeProfileIds?.Select(g => g.ToString()).ToList() ?? []
         };
 
-        db.ListItems.Add(item);
-        await db.SaveChangesAsync();
+        list.Items.Add(item);
+        list.UpdatedAt = DateTime.UtcNow;
+        await listRepo.UpdateAsync(list);
 
-        if (request.AttendeeProfileIds != null)
-        {
-            foreach (var profileId in request.AttendeeProfileIds)
-            {
-                db.ListItemAttendees.Add(new ListItemAttendee { ListItemId = item.Id, ProfileId = profileId });
-            }
-            await db.SaveChangesAsync();
-        }
-
-        var itemWithAttendees = await db.ListItems
-            .Include(i => i.Attendees)
-            .FirstAsync(i => i.Id == item.Id);
-
-        return CreatedAtAction(nameof(GetItems), new { listId }, MapItemToDto(itemWithAttendees));
+        return CreatedAtAction(nameof(GetItems), new { listId }, MapItemToDto(item));
     }
 
     [HttpPut("{listId:guid}/items/{itemId:guid}")]
     public async Task<ActionResult<ListItemDto>> UpdateItem(Guid listId, Guid itemId, [FromBody] UpdateListItemRequest request)
     {
-        var item = await db.ListItems
-            .Include(i => i.Attendees)
-            .FirstOrDefaultAsync(i => i.Id == itemId && i.ListId == listId);
+        var list = await listRepo.GetByIdAsync(listId.ToString());
+        if (list == null) return NotFound();
+
+        var item = list.Items.FirstOrDefault(i => i.Id == itemId.ToString());
         if (item == null) return NotFound();
 
         if (request.Title != null) item.Title = request.Title;
@@ -143,55 +121,68 @@ public class ListsController(AppDbContext db) : ControllerBase
         if (request.IsChecked.HasValue) item.IsChecked = request.IsChecked.Value;
         if (request.StartDate.HasValue) item.StartDate = request.StartDate;
         if (request.EndDate.HasValue) item.EndDate = request.EndDate;
+        if (request.AttendeeProfileIds != null)
+            item.AttendeeProfileIds = request.AttendeeProfileIds.Select(g => g.ToString()).ToList();
         item.UpdatedAt = DateTime.UtcNow;
 
-        if (request.AttendeeProfileIds != null)
-        {
-            db.ListItemAttendees.RemoveRange(item.Attendees);
-            foreach (var profileId in request.AttendeeProfileIds)
-            {
-                db.ListItemAttendees.Add(new ListItemAttendee { ListItemId = item.Id, ProfileId = profileId });
-            }
-        }
+        list.UpdatedAt = DateTime.UtcNow;
+        await listRepo.UpdateAsync(list);
 
-        await db.SaveChangesAsync();
         return Ok(MapItemToDto(item));
     }
 
     [HttpDelete("{listId:guid}/items/{itemId:guid}")]
     public async Task<IActionResult> DeleteItem(Guid listId, Guid itemId)
     {
-        var item = await db.ListItems.FirstOrDefaultAsync(i => i.Id == itemId && i.ListId == listId);
+        var list = await listRepo.GetByIdAsync(listId.ToString());
+        if (list == null) return NotFound();
+
+        var item = list.Items.FirstOrDefault(i => i.Id == itemId.ToString());
         if (item == null) return NotFound();
-        db.ListItems.Remove(item);
-        await db.SaveChangesAsync();
+
+        list.Items.Remove(item);
+        list.UpdatedAt = DateTime.UtcNow;
+        await listRepo.UpdateAsync(list);
+
         return NoContent();
     }
 
     [HttpPatch("{listId:guid}/items/{itemId:guid}/toggle")]
     public async Task<ActionResult<ListItemDto>> ToggleItem(Guid listId, Guid itemId)
     {
-        var item = await db.ListItems
-            .Include(i => i.Attendees)
-            .FirstOrDefaultAsync(i => i.Id == itemId && i.ListId == listId);
+        var list = await listRepo.GetByIdAsync(listId.ToString());
+        if (list == null) return NotFound();
+
+        var item = list.Items.FirstOrDefault(i => i.Id == itemId.ToString());
         if (item == null) return NotFound();
+
         item.IsChecked = !item.IsChecked;
         item.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync();
+        list.UpdatedAt = DateTime.UtcNow;
+        await listRepo.UpdateAsync(list);
+
         return Ok(MapItemToDto(item));
     }
 
     private static ShoppingListDto MapToDto(ShoppingList l) => new(
-        l.Id, l.Title, l.Description, l.IsFavorite, l.CreatedByProfileId,
+        Guid.Parse(l.Id), l.Title, l.Description, l.IsFavorite,
+        Guid.Parse(l.CreatedByProfileId),
         l.CreatedAt, l.UpdatedAt,
-        l.Items?.Count ?? 0,
-        l.Items?.Count(i => i.IsChecked) ?? 0
+        l.Items.Count,
+        l.Items.Count(i => i.IsChecked)
     );
 
     private static ListItemDto MapItemToDto(ListItem i) => new(
-        i.Id, i.ListId, i.Title, i.Description, i.IsChecked,
-        i.StartDate, i.EndDate,
-        i.Attendees?.Select(a => a.ProfileId).ToList() ?? [],
-        i.CreatedByProfileId, i.CreatedAt, i.UpdatedAt
+        Guid.Parse(i.Id),
+        Guid.Parse(i.ListId),
+        i.Title,
+        i.Description,
+        i.IsChecked,
+        i.StartDate,
+        i.EndDate,
+        i.AttendeeProfileIds.Select(Guid.Parse).ToList(),
+        Guid.Parse(i.CreatedByProfileId),
+        i.CreatedAt,
+        i.UpdatedAt
     );
 }

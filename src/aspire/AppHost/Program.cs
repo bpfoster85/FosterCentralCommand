@@ -1,9 +1,9 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var postgres = builder.AddPostgres("postgres")
-    .WithPgAdmin();
+var cosmos = builder.AddAzureCosmosDB("cosmos")
+    .RunAsEmulator();
 
-var database = postgres.AddDatabase("fostercc");
+var database = cosmos.AddCosmosDatabase("fostercc");
 
 var redis = builder.AddRedis("redis");
 
