@@ -1,0 +1,6 @@
+@FosterCentralCommand.Api_HostAddress = http://localhost:5076
+
+GET {{FosterCentralCommand.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
