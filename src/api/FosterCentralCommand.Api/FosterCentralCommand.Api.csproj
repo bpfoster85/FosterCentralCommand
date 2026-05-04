@@ -9,13 +9,9 @@
   <ItemGroup>
     <PackageReference Include="Google.Apis.Calendar.v3" Version="1.73.0.4073" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.14" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.*">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.59.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.*" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.*" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.*" />
     <PackageReference Include="StackExchange.Redis" Version="2.12.14" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.*" />
   </ItemGroup>

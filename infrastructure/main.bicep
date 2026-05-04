@@ -1,5 +1,5 @@
 // Foster Central Command - Azure Infrastructure
-// Deploys: Azure Container Apps, PostgreSQL Flexible Server, Azure Cache for Redis
+// Deploys: Azure Container Apps, CosmosDB, Azure Cache for Redis
 
 @description('Environment name (dev, staging, prod)')
 @allowed(['dev', 'staging', 'prod'])
@@ -7,13 +7,6 @@ param environmentName string = 'dev'
 
 @description('Azure region for all resources')
 param location string = resourceGroup().location
-
-@description('Administrator login for PostgreSQL')
-param postgresAdminLogin string = 'fccadmin'
-
-@secure()
-@description('Administrator password for PostgreSQL')
-param postgresAdminPassword string
 
 @description('Google Calendar ID for calendar sync')
 param googleCalendarId string = ''
@@ -50,16 +43,16 @@ module containerAppsEnv 'modules/container-apps-env.bicep' = {
   }
 }
 
-// PostgreSQL Flexible Server
-module postgres 'modules/postgres.bicep' = {
-  name: 'postgres'
+// CosmosDB Account, Database and Containers
+module cosmos 'modules/cosmosdb.bicep' = {
+  name: 'cosmos'
   params: {
-    name: '${prefix}-postgres'
+    name: '${prefix}-cosmos'
     location: location
     tags: tags
-    adminLogin: postgresAdminLogin
-    adminPassword: postgresAdminPassword
     databaseName: 'fostercc'
+    profilesContainerName: 'profiles'
+    shoppingListsContainerName: 'shoppingLists'
   }
 }
 
@@ -85,12 +78,20 @@ module api 'modules/container-app.bicep' = {
     targetPort: 8080
     env: [
       {
-        name: 'ConnectionStrings__DefaultConnection'
-        value: 'Host=${postgres.outputs.fqdn};Database=fostercc;Username=${postgresAdminLogin};Password=${postgresAdminPassword};SSL Mode=Require;Trust Server Certificate=true'
+        name: 'CosmosDb__AccountEndpoint'
+        value: cosmos.outputs.accountEndpoint
+      }
+      {
+        name: 'CosmosDb__AccountKey'
+        secretRef: 'cosmos-key'
+      }
+      {
+        name: 'CosmosDb__DatabaseName'
+        value: 'fostercc'
       }
       {
         name: 'ConnectionStrings__Redis'
-        value: '${redis.outputs.hostName}:6380,password=${redis.outputs.primaryKey},ssl=True,abortConnect=False'
+        value: '${redis.outputs.hostName}:6380,password=${redis.outputs.primaryKey},ssl=true'
       }
       {
         name: 'Google__CalendarId'
@@ -108,7 +109,7 @@ module api 'modules/container-app.bicep' = {
   }
 }
 
-// Frontend Container App (static web app alternative)
+// Frontend Container App
 module frontend 'modules/container-app.bicep' = {
   name: 'frontend'
   params: {
@@ -125,5 +126,5 @@ module frontend 'modules/container-app.bicep' = {
 
 output apiUrl string = api.outputs.url
 output frontendUrl string = frontend.outputs.url
-output postgresHost string = postgres.outputs.fqdn
+output cosmosEndpoint string = cosmos.outputs.accountEndpoint
 output redisHost string = redis.outputs.hostName
