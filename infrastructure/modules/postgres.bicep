@@ -10,7 +10,7 @@ param skuTier string = 'GeneralPurpose'
 param storageSizeGB int = 32
 param backupRetentionDays int = 7
 
-resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2023-06-01-preview' = {
+resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2022-12-01' = {
   name: name
   location: location
   tags: tags
@@ -35,7 +35,7 @@ resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2023-06-01-pr
   }
 }
 
-resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-06-01-preview' = {
+resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2022-12-01' = {
   parent: postgresServer
   name: databaseName
   properties: {
@@ -45,7 +45,7 @@ resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-06-0
 }
 
 // Allow Azure services to access the database
-resource firewallRule 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2023-06-01-preview' = {
+resource firewallRule 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2022-12-01' = {
   parent: postgresServer
   name: 'AllowAzureServices'
   properties: {
