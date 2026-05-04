@@ -74,5 +74,6 @@ public class ProfilesController(IProfileRepository profileRepo) : ControllerBase
     }
 
     private static ProfileDto MapToDto(Profile p) => new(
-        Guid.Parse(p.Id), p.Name, p.Email, p.Color, p.AvatarUrl, p.CreatedAt, p.UpdatedAt);
+        Guid.TryParse(p.Id, out var pid) ? pid : Guid.Empty,
+        p.Name, p.Email, p.Color, p.AvatarUrl, p.CreatedAt, p.UpdatedAt);
 }

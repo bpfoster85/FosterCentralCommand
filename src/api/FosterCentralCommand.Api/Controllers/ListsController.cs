@@ -165,23 +165,27 @@ public class ListsController(IShoppingListRepository listRepo) : ControllerBase
     }
 
     private static ShoppingListDto MapToDto(ShoppingList l) => new(
-        Guid.Parse(l.Id), l.Title, l.Description, l.IsFavorite,
-        Guid.Parse(l.CreatedByProfileId),
+        Guid.TryParse(l.Id, out var lid) ? lid : Guid.Empty,
+        l.Title, l.Description, l.IsFavorite,
+        Guid.TryParse(l.CreatedByProfileId, out var cbpid) ? cbpid : Guid.Empty,
         l.CreatedAt, l.UpdatedAt,
         l.Items.Count,
         l.Items.Count(i => i.IsChecked)
     );
 
     private static ListItemDto MapItemToDto(ListItem i) => new(
-        Guid.Parse(i.Id),
-        Guid.Parse(i.ListId),
+        Guid.TryParse(i.Id, out var iid) ? iid : Guid.Empty,
+        Guid.TryParse(i.ListId, out var ilid) ? ilid : Guid.Empty,
         i.Title,
         i.Description,
         i.IsChecked,
         i.StartDate,
         i.EndDate,
-        i.AttendeeProfileIds.Select(Guid.Parse).ToList(),
-        Guid.Parse(i.CreatedByProfileId),
+        i.AttendeeProfileIds
+            .Select(a => Guid.TryParse(a, out var ag) ? ag : Guid.Empty)
+            .Where(g => g != Guid.Empty)
+            .ToList(),
+        Guid.TryParse(i.CreatedByProfileId, out var icbpid) ? icbpid : Guid.Empty,
         i.CreatedAt,
         i.UpdatedAt
     );

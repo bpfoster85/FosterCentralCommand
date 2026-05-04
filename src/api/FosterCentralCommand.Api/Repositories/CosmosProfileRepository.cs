@@ -40,6 +40,7 @@ public class CosmosProfileRepository(CosmosClient client, CosmosDbOptions option
     {
         var query = Container.GetItemLinqQueryable<Profile>()
             .Where(p => p.Email == email)
+            .Take(1)
             .ToFeedIterator();
 
         while (query.HasMoreResults)
