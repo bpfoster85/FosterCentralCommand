@@ -1,0 +1,43 @@
+import { useState, useEffect, useCallback } from 'react'
+import { Profile } from '../types'
+import * as profilesApi from '../api/profiles'
+
+export const useProfiles = () => {
+  const [profiles, setProfiles] = useState<Profile[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchProfiles = useCallback(async () => {
+    try {
+      setLoading(true)
+      const data = await profilesApi.getProfiles()
+      setProfiles(data)
+      setError(null)
+    } catch (err) {
+      setError('Failed to load profiles')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { fetchProfiles() }, [fetchProfiles])
+
+  const createProfile = async (data: Omit<Profile, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const profile = await profilesApi.createProfile(data)
+    setProfiles(prev => [...prev, profile])
+    return profile
+  }
+
+  const updateProfile = async (id: string, data: Partial<Profile>) => {
+    const updated = await profilesApi.updateProfile(id, data)
+    setProfiles(prev => prev.map(p => p.id === id ? updated : p))
+    return updated
+  }
+
+  const deleteProfile = async (id: string) => {
+    await profilesApi.deleteProfile(id)
+    setProfiles(prev => prev.filter(p => p.id !== id))
+  }
+
+  return { profiles, loading, error, refetch: fetchProfiles, createProfile, updateProfile, deleteProfile }
+}
