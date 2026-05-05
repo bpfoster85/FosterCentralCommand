@@ -18,11 +18,16 @@ public interface ICalendarService
 
 public class CalendarService(
     IDistributedCache cache,
-    IConfiguration configuration,
+    FamilyContext familyContext,
     ILogger<CalendarService> logger) : ICalendarService
 {
-    private const string CacheKey = "calendar:events";
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
+
+    private Family Family => familyContext.Current
+        ?? throw new InvalidOperationException("CalendarService requires a family in context.");
+
+    /// <summary>Cache key namespaced by family so tenants do not see each other's events.</summary>
+    private string CacheKey => $"calendar:events:{Family.Id}";
 
     public async Task<IEnumerable<CalendarEventDto>> GetEventsAsync(
         DateTime? start, DateTime? end, IEnumerable<string>? profileEmails)
@@ -43,15 +48,15 @@ public class CalendarService(
 
     public async Task<CalendarEventDto> CreateEventAsync(CreateCalendarEventDto dto)
     {
-        var calendarId = configuration["Google:CalendarId"];
-        if (string.IsNullOrEmpty(calendarId))
-            throw new InvalidOperationException("Google Calendar is not configured (missing Google:CalendarId).");
+        var family = Family;
+        if (string.IsNullOrEmpty(family.GoogleCalendarId))
+            throw new InvalidOperationException("Google Calendar is not configured for this family (missing GoogleCalendarId).");
 
         // Insert requires write access — service account credential with Calendar scope.
-        var initializer = BuildInitializer(readWrite: true)
+        var initializer = BuildInitializer(family, readWrite: true)
             ?? throw new InvalidOperationException(
-                "Google Calendar service account is not configured. " +
-                "Set Google:ServiceAccountKeyPath to enable event creation.");
+                "Google Calendar service account is not configured for this family. " +
+                "Set GoogleServiceAccountJson on the family to enable event creation.");
 
         var service = new Google.Apis.Calendar.v3.CalendarService(initializer);
 
@@ -75,8 +80,8 @@ public class CalendarService(
             newEvent.End = new EventDateTime { DateTimeDateTimeOffset = new DateTimeOffset(dto.End, TimeSpan.Zero) };
         }
 
-        var created = await service.Events.Insert(newEvent, calendarId).ExecuteAsync();
-        logger.LogInformation("Created Google Calendar event {EventId}", created.Id);
+        var created = await service.Events.Insert(newEvent, family.GoogleCalendarId).ExecuteAsync();
+        logger.LogInformation("Created Google Calendar event {EventId} for family {FamilyId}", created.Id, family.Id);
 
         // Invalidate cache so the next read reflects the new event.
         await cache.RemoveAsync(CacheKey);
@@ -88,23 +93,23 @@ public class CalendarService(
     {
         try
         {
-            var calendarId = configuration["Google:CalendarId"];
-            if (string.IsNullOrEmpty(calendarId))
+            var family = Family;
+            if (string.IsNullOrEmpty(family.GoogleCalendarId))
             {
-                logger.LogWarning("Google Calendar not configured. Skipping sync.");
+                logger.LogWarning("Family {FamilyId} has no GoogleCalendarId. Skipping sync.", family.Id);
                 return;
             }
 
-            var initializer = BuildInitializer(readWrite: false);
+            var initializer = BuildInitializer(family, readWrite: false);
             if (initializer is null)
             {
-                logger.LogWarning("Google Calendar not configured. Skipping sync.");
+                logger.LogWarning("Family {FamilyId} has no Google credentials configured. Skipping sync.", family.Id);
                 return;
             }
 
             var service = new Google.Apis.Calendar.v3.CalendarService(initializer);
 
-            var request = service.Events.List(calendarId);
+            var request = service.Events.List(family.GoogleCalendarId);
             // Sync a wide window so the UI can navigate freely without re-fetching
             // from Google: 2 weeks back through 2 months forward.
             request.TimeMinDateTimeOffset = DateTimeOffset.UtcNow.AddDays(-14);
@@ -122,32 +127,30 @@ public class CalendarService(
                 AbsoluteExpirationRelativeToNow = CacheDuration
             });
 
-            logger.LogInformation("Synced {Count} calendar events", events.Count);
+            logger.LogInformation("Synced {Count} calendar events for family {FamilyId}", events.Count, family.Id);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to sync calendar");
+            logger.LogError(ex, "Failed to sync calendar for family {FamilyId}", familyContext.Current?.Id);
             throw;
         }
     }
 
     /// <summary>
-    /// Builds a Google API initializer. Prefers service-account credentials
-    /// (required for write access). Falls back to API key for read-only.
-    /// Returns null when nothing is configured.
+    /// Builds a Google API initializer from the family's stored credentials.
+    /// Prefers service-account JSON (required for write access). Falls back to
+    /// API key for read-only public-calendar access. Returns null when nothing
+    /// is configured.
     /// </summary>
-    private BaseClientService.Initializer? BuildInitializer(bool readWrite)
+    private BaseClientService.Initializer? BuildInitializer(Family family, bool readWrite)
     {
-        var serviceAccountPath = configuration["Google:ServiceAccountKeyPath"];
-        var apiKey = configuration["Google:ApiKey"];
-
-        if (!string.IsNullOrEmpty(serviceAccountPath) && File.Exists(serviceAccountPath))
+        if (!string.IsNullOrEmpty(family.GoogleServiceAccountJson))
         {
-            logger.LogInformation("Using service account authentication for Google Calendar (readWrite={ReadWrite})", readWrite);
+            logger.LogDebug("Family {FamilyId}: using service account auth (readWrite={ReadWrite})", family.Id, readWrite);
             var scope = readWrite
                 ? Google.Apis.Calendar.v3.CalendarService.Scope.Calendar
                 : Google.Apis.Calendar.v3.CalendarService.Scope.CalendarReadonly;
-            var credential = GoogleCredential.FromFile(serviceAccountPath).CreateScoped(scope);
+            var credential = GoogleCredential.FromJson(family.GoogleServiceAccountJson).CreateScoped(scope);
 
             return new BaseClientService.Initializer
             {
@@ -156,12 +159,12 @@ public class CalendarService(
             };
         }
 
-        if (!readWrite && !string.IsNullOrEmpty(apiKey))
+        if (!readWrite && !string.IsNullOrEmpty(family.GoogleApiKey))
         {
-            logger.LogInformation("Using API key authentication for Google Calendar (public calendars only)");
+            logger.LogDebug("Family {FamilyId}: using API key auth (read-only)", family.Id);
             return new BaseClientService.Initializer
             {
-                ApiKey = apiKey,
+                ApiKey = family.GoogleApiKey,
                 ApplicationName = "FosterCentralCommand"
             };
         }

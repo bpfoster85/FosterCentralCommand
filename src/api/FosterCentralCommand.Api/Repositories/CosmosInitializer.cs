@@ -13,6 +13,12 @@ public static class CosmosInitializer
 
             await db.CreateContainerIfNotExistsAsync(new ContainerProperties
             {
+                Id = options.FamiliesContainer,
+                PartitionKeyPath = "/id"
+            });
+
+            await db.CreateContainerIfNotExistsAsync(new ContainerProperties
+            {
                 Id = options.ProfilesContainer,
                 PartitionKeyPath = "/id"
             });

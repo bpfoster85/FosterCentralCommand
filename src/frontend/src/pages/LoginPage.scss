@@ -1,0 +1,133 @@
+// =============================================================================
+// Login pages — simple centered card with a couple of inputs and a button.
+// Shared by the family login (/login) and admin login (/admin-login) pages.
+// =============================================================================
+
+@use 'sass:color';
+@use '../styles/tokens' as *;
+
+.login-screen {
+  // Fill the full viewport even when this page is rendered outside AppShell.
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $sky-space-lg;
+  background: linear-gradient(135deg, $sky-cream 0%, $sky-sage-soft 100%);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: $sky-surface;
+  border-radius: $sky-radius-lg;
+  padding: $sky-space-xl;
+  box-shadow: $sky-shadow-lg;
+  display: flex;
+  flex-direction: column;
+  gap: $sky-space-md;
+
+  &__header {
+    text-align: center;
+    margin-bottom: $sky-space-sm;
+  }
+
+  &__title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: $sky-text-primary;
+    margin: 0;
+  }
+
+  &__subtitle {
+    font-size: 0.95rem;
+    color: $sky-text-secondary;
+    margin-top: $sky-space-xs;
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: $sky-space-xs;
+  }
+
+  &__label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: $sky-text-secondary;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__input {
+    width: 100%;
+    min-height: $sky-touch-target;
+    padding: 0.65rem 0.9rem;
+    border: 1px solid $sky-border-strong;
+    border-radius: $sky-radius-sm;
+    background: $sky-surface-soft;
+    color: $sky-text-primary;
+    font-size: 1rem;
+    font-family: inherit;
+
+    &:focus {
+      outline: none;
+      border-color: $sky-lagoon-deep;
+      box-shadow: 0 0 0 3px rgba($sky-lagoon-deep, 0.15);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  &__error {
+    background: rgba($sky-coral, 0.18);
+    color: color.adjust($sky-coral, $lightness: -25%);
+    border-radius: $sky-radius-sm;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.9rem;
+  }
+
+  &__submit {
+    margin-top: $sky-space-sm;
+    min-height: $sky-touch-target;
+    border: none;
+    border-radius: $sky-radius-pill;
+    background: $sky-lagoon-deep;
+    color: $sky-cream;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 120ms ease, transform 120ms ease;
+
+    &:hover:not(:disabled) {
+      background: $sky-lagoon-darker;
+    }
+    &:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  &__footer {
+    text-align: center;
+    margin-top: $sky-space-sm;
+    font-size: 0.85rem;
+
+    a {
+      color: $sky-lagoon-deep;
+      text-decoration: none;
+      font-weight: 500;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}
