@@ -1,0 +1,67 @@
+// =============================================================================
+// Skylight Design Tokens — SASS variables
+// =============================================================================
+// SASS variables for compile-time use (color math, mixins, etc.).
+// Runtime CSS custom properties are emitted in `_theme-vars.scss`.
+// =============================================================================
+
+@use 'sass:color';
+
+// === Brand Palette ===========================================================
+$sky-sage:        #b8c8a8;
+$sky-sage-deep:   #8aa07a;
+$sky-lagoon:      #7fb3b3;
+$sky-lagoon-deep: #4a8b8b;
+$sky-cream:       #fdfbf6;
+$sky-warm-white:  #faf8f3;
+$sky-charcoal:    #2c3e3e;
+$sky-soft-gray:   #6b7878;
+$sky-blush:       #f5d5c5;
+$sky-amber:       #e8b974;
+$sky-coral:       #e8a59a;
+$sky-lavender:    #c5b8d4;
+
+// Derived shades
+$sky-lagoon-soft:   color.scale($sky-lagoon, $lightness: 30%);
+$sky-lagoon-darker: color.scale($sky-lagoon-deep, $lightness: -10%);
+$sky-sage-soft:     color.scale($sky-sage, $lightness: 25%);
+
+// === Semantic ================================================================
+$sky-bg:             $sky-cream;
+$sky-surface:        #ffffff;
+$sky-surface-soft:   $sky-warm-white;
+$sky-text-primary:   $sky-charcoal;
+$sky-text-secondary: $sky-soft-gray;
+$sky-border:         rgba($sky-charcoal, 0.08);
+$sky-border-strong:  rgba($sky-charcoal, 0.16);
+
+// === Shadows =================================================================
+$sky-shadow-sm: 0 1px 3px rgba($sky-charcoal, 0.06), 0 1px 2px rgba($sky-charcoal, 0.04);
+$sky-shadow-md: 0 4px 12px rgba($sky-charcoal, 0.08), 0 2px 4px rgba($sky-charcoal, 0.04);
+$sky-shadow-lg: 0 12px 24px rgba($sky-charcoal, 0.10), 0 4px 8px rgba($sky-charcoal, 0.06);
+
+// === Radii ===================================================================
+$sky-radius-sm:   8px;
+$sky-radius-md:   16px;
+$sky-radius-lg:   24px;
+$sky-radius-pill: 999px;
+
+// === Spacing =================================================================
+$sky-space-xs: 0.25rem;
+$sky-space-sm: 0.5rem;
+$sky-space-md: 1rem;
+$sky-space-lg: 1.5rem;
+$sky-space-xl: 2rem;
+
+// === Typography ==============================================================
+$sky-font-family: ('Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+                   'SF Pro Display', system-ui, Roboto, sans-serif);
+
+// === Touch / Sizing ==========================================================
+$sky-touch-target: 44px;
+
+// === Breakpoints =============================================================
+$bp-sm: 480px;
+$bp-md: 768px;
+$bp-lg: 1024px;
+$bp-xl: 1280px;

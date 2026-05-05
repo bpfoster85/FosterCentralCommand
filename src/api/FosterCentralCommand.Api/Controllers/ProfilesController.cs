@@ -73,7 +73,23 @@ public class ProfilesController(IProfileRepository profileRepo) : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Admin endpoint: manually add or subtract stars from a profile's running
+    /// total. Negative deltas are clamped so the total never goes below zero.
+    /// </summary>
+    [HttpPost("{id:guid}/stars")]
+    public async Task<ActionResult<ProfileDto>> AdjustStars(Guid id, [FromBody] AdjustStarsRequest request)
+    {
+        var profile = await profileRepo.GetByIdAsync(id.ToString());
+        if (profile == null) return NotFound();
+
+        profile.TotalStars = Math.Max(0, profile.TotalStars + request.Delta);
+        profile.UpdatedAt = DateTime.UtcNow;
+        var updated = await profileRepo.UpdateAsync(profile);
+        return Ok(MapToDto(updated));
+    }
+
     private static ProfileDto MapToDto(Profile p) => new(
         Guid.TryParse(p.Id, out var pid) ? pid : Guid.Empty,
-        p.Name, p.Email, p.Color, p.AvatarUrl, p.CreatedAt, p.UpdatedAt);
+        p.Name, p.Email, p.Color, p.AvatarUrl, p.TotalStars, p.CreatedAt, p.UpdatedAt);
 }

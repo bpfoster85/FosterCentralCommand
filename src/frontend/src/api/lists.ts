@@ -1,5 +1,5 @@
 import apiClient from './apiClient'
-import { ShoppingList, ListItem } from '../types'
+import type { ShoppingList, ListItem } from '../types'
 
 export const getLists = () => apiClient.get<ShoppingList[]>('/lists').then(r => r.data)
 export const getList = (id: string) => apiClient.get<ShoppingList>(`/lists/${id}`).then(r => r.data)

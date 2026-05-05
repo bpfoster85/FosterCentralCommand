@@ -1,13 +1,19 @@
 using Microsoft.Azure.Cosmos;
+using System.Text.Json.Serialization;
 using FosterCentralCommand.Api.Repositories;
 using FosterCentralCommand.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Controllers
-builder.Services.AddControllers();
+builder.Services
+    .AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Accept and emit enums as strings (e.g. "Weekly" instead of 2).
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
 // CORS for React dev server
 builder.Services.AddCors(options =>
@@ -39,15 +45,11 @@ builder.Services.AddSingleton(_ => new CosmosClient(
     }));
 builder.Services.AddScoped<IProfileRepository, CosmosProfileRepository>();
 builder.Services.AddScoped<IShoppingListRepository, CosmosShoppingListRepository>();
+builder.Services.AddScoped<IGoalRepository, CosmosGoalRepository>();
+builder.Services.AddScoped<IChoreRepository, CosmosChoreRepository>();
 
-// Redis Cache
-var redisConnectionString = builder.Configuration.GetConnectionString("Redis")
-    ?? "localhost:6379";
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-    options.Configuration = redisConnectionString;
-    options.InstanceName = "FCC:";
-});
+// In-process distributed cache
+builder.Services.AddDistributedMemoryCache();
 
 // Services
 builder.Services.AddScoped<ICalendarService, CalendarService>();
@@ -61,12 +63,6 @@ using (var scope = app.Services.CreateScope())
     var options = scope.ServiceProvider.GetRequiredService<CosmosDbOptions>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
     await CosmosInitializer.InitializeAsync(cosmosClient, options, logger);
-}
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
 }
 
 app.UseCors();

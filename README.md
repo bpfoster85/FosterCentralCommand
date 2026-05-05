@@ -14,7 +14,6 @@ A Progressive Web Application (PWA) family command center featuring a Google Cal
 | ORM | Entity Framework Core |
 | Database | PostgreSQL |
 | Cache | Azure Cache for Redis |
-| Orchestration | .NET Aspire |
 | Infrastructure | Azure Bicep |
 | Hosting | Azure Container Apps |
 
@@ -43,9 +42,7 @@ FosterCentralCommand/
 │   │       ├── DTOs/                    # Request/response models
 │   │       ├── Models/                  # EF Core entities
 │   │       └── Services/               # CalendarService (Google + Redis)
-│   ├── aspire/
-│   │   ├── AppHost/                     # .NET Aspire orchestration
-│   │   └── ServiceDefaults/             # Shared OpenTelemetry defaults
+
 │   └── FosterCentralCommand.sln         # .NET solution file
 └── infrastructure/
     ├── main.bicep                        # Root Bicep template
@@ -115,16 +112,7 @@ cd src/api/FosterCentralCommand.Api
 dotnet run
 ```
 
-API runs at http://localhost:5000
-
-### Run with .NET Aspire (recommended)
-
-```bash
-cd src/aspire/AppHost
-dotnet run
-```
-
-Opens the Aspire dashboard. Automatically starts PostgreSQL, Redis, and the API.
+API runs at http://localhost:5076
 
 ### Environment Variables
 

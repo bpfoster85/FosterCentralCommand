@@ -4,6 +4,7 @@ export interface Profile {
   email: string
   color: string
   avatarUrl?: string
+  totalStars: number
   createdAt: string
   updatedAt: string
 }
@@ -56,4 +57,32 @@ export interface DashboardLayout {
   h: number
   minW?: number
   minH?: number
+}
+
+export interface Goal {
+  id: string
+  profileId: string
+  title: string
+  emoji: string
+  starTarget: number
+  createdAt: string
+  updatedAt: string
+}
+
+export type ChoreRecurrence = 'None' | 'Daily' | 'EveryOtherDay' | 'Weekly'
+
+export interface Chore {
+  id: string
+  title: string
+  description?: string
+  assignedProfileId: string
+  starValue: number
+  dueDate: string
+  recurrence: ChoreRecurrence
+  recurrenceDaysOfWeek: number[]
+  recurrenceEndDate?: string | null
+  completedDates: string[]
+  approvedDates: string[]
+  createdAt: string
+  updatedAt: string
 }

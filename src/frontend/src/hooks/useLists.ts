@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { ShoppingList, ListItem } from '../types'
+import type { ShoppingList, ListItem } from '../types'
 import * as listsApi from '../api/lists'
 
 export const useLists = () => {

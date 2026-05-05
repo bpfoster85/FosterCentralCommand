@@ -13,6 +13,7 @@ public interface ICalendarService
 {
     Task<IEnumerable<CalendarEventDto>> GetEventsAsync(DateTime? start, DateTime? end, IEnumerable<string>? profileEmails);
     Task SyncAsync();
+    Task<CalendarEventDto> CreateEventAsync(CreateCalendarEventDto dto);
 }
 
 public class CalendarService(
@@ -40,28 +41,74 @@ public class CalendarService(
         return events;
     }
 
+    public async Task<CalendarEventDto> CreateEventAsync(CreateCalendarEventDto dto)
+    {
+        var calendarId = configuration["Google:CalendarId"];
+        if (string.IsNullOrEmpty(calendarId))
+            throw new InvalidOperationException("Google Calendar is not configured (missing Google:CalendarId).");
+
+        // Insert requires write access — service account credential with Calendar scope.
+        var initializer = BuildInitializer(readWrite: true)
+            ?? throw new InvalidOperationException(
+                "Google Calendar service account is not configured. " +
+                "Set Google:ServiceAccountKeyPath to enable event creation.");
+
+        var service = new Google.Apis.Calendar.v3.CalendarService(initializer);
+
+        var newEvent = new Event
+        {
+            Summary = dto.Title,
+            Description = dto.Description,
+            Location = dto.Location,
+            Attendees = dto.AttendeeEmails?.Select(email => new EventAttendee { Email = email }).ToList(),
+        };
+
+        if (dto.AllDay)
+        {
+            // Google requires date-only (YYYY-MM-DD) for all-day events; end is exclusive.
+            newEvent.Start = new EventDateTime { Date = dto.Start.ToString("yyyy-MM-dd") };
+            newEvent.End = new EventDateTime { Date = dto.End.ToString("yyyy-MM-dd") };
+        }
+        else
+        {
+            newEvent.Start = new EventDateTime { DateTimeDateTimeOffset = new DateTimeOffset(dto.Start, TimeSpan.Zero) };
+            newEvent.End = new EventDateTime { DateTimeDateTimeOffset = new DateTimeOffset(dto.End, TimeSpan.Zero) };
+        }
+
+        var created = await service.Events.Insert(newEvent, calendarId).ExecuteAsync();
+        logger.LogInformation("Created Google Calendar event {EventId}", created.Id);
+
+        // Invalidate cache so the next read reflects the new event.
+        await cache.RemoveAsync(CacheKey);
+
+        return MapEvent(created);
+    }
+
     public async Task SyncAsync()
     {
         try
         {
             var calendarId = configuration["Google:CalendarId"];
-            var apiKey = configuration["Google:ApiKey"];
-
-            if (string.IsNullOrEmpty(calendarId) || string.IsNullOrEmpty(apiKey))
+            if (string.IsNullOrEmpty(calendarId))
             {
                 logger.LogWarning("Google Calendar not configured. Skipping sync.");
                 return;
             }
 
-            var service = new Google.Apis.Calendar.v3.CalendarService(new BaseClientService.Initializer
+            var initializer = BuildInitializer(readWrite: false);
+            if (initializer is null)
             {
-                ApiKey = apiKey,
-                ApplicationName = "FosterCentralCommand"
-            });
+                logger.LogWarning("Google Calendar not configured. Skipping sync.");
+                return;
+            }
+
+            var service = new Google.Apis.Calendar.v3.CalendarService(initializer);
 
             var request = service.Events.List(calendarId);
-            request.TimeMinDateTimeOffset = DateTimeOffset.UtcNow.AddMonths(-3);
-            request.TimeMaxDateTimeOffset = DateTimeOffset.UtcNow.AddMonths(6);
+            // Sync a wide window so the UI can navigate freely without re-fetching
+            // from Google: 2 weeks back through 2 months forward.
+            request.TimeMinDateTimeOffset = DateTimeOffset.UtcNow.AddDays(-14);
+            request.TimeMaxDateTimeOffset = DateTimeOffset.UtcNow.AddMonths(2);
             request.SingleEvents = true;
             request.OrderBy = EventsResource.ListRequest.OrderByEnum.StartTime;
             request.MaxResults = 500;
@@ -82,6 +129,44 @@ public class CalendarService(
             logger.LogError(ex, "Failed to sync calendar");
             throw;
         }
+    }
+
+    /// <summary>
+    /// Builds a Google API initializer. Prefers service-account credentials
+    /// (required for write access). Falls back to API key for read-only.
+    /// Returns null when nothing is configured.
+    /// </summary>
+    private BaseClientService.Initializer? BuildInitializer(bool readWrite)
+    {
+        var serviceAccountPath = configuration["Google:ServiceAccountKeyPath"];
+        var apiKey = configuration["Google:ApiKey"];
+
+        if (!string.IsNullOrEmpty(serviceAccountPath) && File.Exists(serviceAccountPath))
+        {
+            logger.LogInformation("Using service account authentication for Google Calendar (readWrite={ReadWrite})", readWrite);
+            var scope = readWrite
+                ? Google.Apis.Calendar.v3.CalendarService.Scope.Calendar
+                : Google.Apis.Calendar.v3.CalendarService.Scope.CalendarReadonly;
+            var credential = GoogleCredential.FromFile(serviceAccountPath).CreateScoped(scope);
+
+            return new BaseClientService.Initializer
+            {
+                HttpClientInitializer = credential,
+                ApplicationName = "FosterCentralCommand"
+            };
+        }
+
+        if (!readWrite && !string.IsNullOrEmpty(apiKey))
+        {
+            logger.LogInformation("Using API key authentication for Google Calendar (public calendars only)");
+            return new BaseClientService.Initializer
+            {
+                ApiKey = apiKey,
+                ApplicationName = "FosterCentralCommand"
+            };
+        }
+
+        return null;
     }
 
     private async Task<IEnumerable<CalendarEventDto>> GetCachedEventsAsync()

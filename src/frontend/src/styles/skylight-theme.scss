@@ -1,0 +1,1212 @@
+// =============================================================================
+// Skylight Theme — Foster Central Command
+// Calm, family-friendly aesthetic. Uses SASS for tokens & mixins.
+// =============================================================================
+
+@use 'tokens' as *;
+@use 'mixins' as *;
+@use 'sass:meta';
+@use 'sass:color';
+
+// =============================================================================
+// CSS Custom Properties (runtime tokens — also override PrimeReact)
+// =============================================================================
+:root {
+  // Brand
+  --sky-sage:        #{$sky-sage};
+  --sky-sage-deep:   #{$sky-sage-deep};
+  --sky-lagoon:      #{$sky-lagoon};
+  --sky-lagoon-deep: #{$sky-lagoon-deep};
+  --sky-cream:       #{$sky-cream};
+  --sky-warm-white:  #{$sky-warm-white};
+  --sky-charcoal:    #{$sky-charcoal};
+  --sky-soft-gray:   #{$sky-soft-gray};
+  --sky-blush:       #{$sky-blush};
+  --sky-amber:       #{$sky-amber};
+  --sky-coral:       #{$sky-coral};
+  --sky-lavender:    #{$sky-lavender};
+
+  // Semantic
+  --sky-bg:             #{$sky-bg};
+  --sky-surface:        #{$sky-surface};
+  --sky-surface-soft:   #{$sky-surface-soft};
+  --sky-text-primary:   #{$sky-text-primary};
+  --sky-text-secondary: #{$sky-text-secondary};
+  --sky-border:         #{$sky-border};
+
+  // Shadows / radii
+  --sky-shadow-sm:   #{$sky-shadow-sm};
+  --sky-shadow-md:   #{$sky-shadow-md};
+  --sky-shadow-lg:   #{$sky-shadow-lg};
+  --sky-radius-sm:   #{$sky-radius-sm};
+  --sky-radius-md:   #{$sky-radius-md};
+  --sky-radius-lg:   #{$sky-radius-lg};
+  --sky-radius-pill: #{$sky-radius-pill};
+
+  // PrimeReact overrides
+  --primary-color:      #{$sky-lagoon-deep};
+  --primary-color-text: #ffffff;
+  --surface-ground:     #{$sky-bg};
+  --surface-card:       #{$sky-surface};
+  --surface-border:     #{$sky-border};
+  --text-color:         #{$sky-text-primary};
+  --text-color-secondary: #{$sky-text-secondary};
+  --font-family:        #{meta.inspect($sky-font-family)};
+}
+
+// =============================================================================
+// Typography
+// =============================================================================
+body {
+  font-family: $sky-font-family;
+  color: $sky-text-primary;
+  background-color: $sky-bg;
+  font-feature-settings: 'cv11', 'ss01', 'ss03';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: $sky-text-primary;
+}
+
+// =============================================================================
+// App Shell — Top Navigation
+// =============================================================================
+.sky-topbar {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem $sky-space-lg;
+  background: $sky-surface;
+  color: $sky-text-primary;
+  border-bottom: 1px solid $sky-border;
+  box-shadow: $sky-shadow-sm;
+  flex-shrink: 0;
+  z-index: 100;
+
+  &-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    flex: 1;
+    color: $sky-text-primary;
+  }
+
+  &-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, $sky-lagoon 0%, $sky-sage 100%);
+    margin-right: 0.75rem;
+
+    .pi {
+      color: white;
+      font-size: 1.1rem;
+    }
+  }
+}
+
+// =============================================================================
+// Pill Tab Navigation (primary app nav — always on top)
+// =============================================================================
+.sky-nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: $sky-space-sm;
+  padding: 0.75rem $sky-space-lg;
+  background: $sky-surface;
+  border-bottom: 1px solid $sky-border;
+  box-shadow: $sky-shadow-sm;
+  flex-shrink: 0;
+  overflow-x: auto;
+  z-index: 100;
+}
+
+.sky-nav-clock {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: $sky-radius-pill;
+  background: linear-gradient(135deg, rgba($sky-lagoon, 0.12) 0%, rgba($sky-sage, 0.12) 100%);
+  border: 1px solid $sky-border;
+  margin-right: 0.4rem;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+
+  &-time {
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: $sky-text-primary;
+    line-height: 1;
+  }
+
+  &-zone {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: $sky-text-secondary;
+    line-height: 1;
+  }
+}
+
+.sky-nav-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: $sky-space-sm;
+  padding: 0.625rem 1.25rem;
+  border-radius: $sky-radius-pill;
+  background: transparent;
+  border: none;
+  color: $sky-text-secondary;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  @include sky-touch;
+
+  &:hover {
+    background: $sky-warm-white;
+    color: $sky-text-primary;
+  }
+
+  &.active {
+    background: $sky-lagoon-deep;
+    color: white;
+    box-shadow: $sky-shadow-sm;
+  }
+
+  .pi {
+    font-size: 1rem;
+  }
+}
+
+// =============================================================================
+// Cards — Soft, rounded, calm
+// =============================================================================
+.p-card,
+.sky-card {
+  @include sky-surface;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+
+  &:hover {
+    box-shadow: $sky-shadow-md !important;
+  }
+}
+
+.p-card {
+  border-radius: $sky-radius-md !important;
+  box-shadow: $sky-shadow-sm !important;
+
+  .p-card-body    { padding: 1.25rem; }
+  .p-card-content { padding: 0; }
+}
+
+// Dashboard widget container
+.sky-widget {
+  @include sky-surface;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  &-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid $sky-border;
+    background: $sky-surface-soft;
+    gap: $sky-space-sm;
+
+    // Stacked variant: title row + secondary controls (e.g. filter pills)
+    &-stacked {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.625rem;
+    }
+  }
+
+  &-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $sky-space-sm;
+  }
+
+  &-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: $sky-text-primary;
+    display: flex;
+    align-items: center;
+    gap: $sky-space-sm;
+  }
+
+  &-body {
+    flex: 1;
+    overflow: auto;
+    padding: $sky-space-md;
+  }
+}
+
+// =============================================================================
+// Profile filter pills (radio-style horizontal selector)
+// =============================================================================
+.sky-profile-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  overflow-x: auto;
+
+  // hide scrollbar visually but keep scrollable
+  &::-webkit-scrollbar { height: 0; }
+}
+
+.sky-profile-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem 0.3rem 0.6rem;
+  border-radius: $sky-radius-pill;
+  background: $sky-surface;
+  color: $sky-text-primary;
+  border: 1px solid $sky-border;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  min-height: 32px;
+  position: relative;
+
+  &:hover {
+    background: $sky-warm-white;
+    border-color: $sky-border-strong;
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba($sky-lagoon, 0.35);
+  }
+
+  &.active {
+    box-shadow: $sky-shadow-sm;
+    transform: translateY(-1px);
+
+    .sky-profile-pill-count {
+      background: rgba(255, 255, 255, 0.28);
+      color: inherit;
+    }
+
+    .sky-profile-pill-dot {
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.6);
+    }
+  }
+}
+
+.sky-profile-pill-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: $sky-soft-gray;
+}
+
+.sky-profile-pill-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 0.4rem;
+  border-radius: $sky-radius-pill;
+  background: rgba($sky-charcoal, 0.08);
+  color: $sky-text-secondary;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.sky-profile-pill-check {
+  font-size: 0.7rem !important;
+  font-weight: 700;
+  margin-left: 0.1rem;
+  opacity: 0.9;
+}
+
+// =============================================================================
+// Buttons — Touch-friendly, soft
+// =============================================================================
+.p-button {
+  border-radius: $sky-radius-pill !important;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  transition: all 0.2s ease;
+  min-height: $sky-touch-target;
+
+  &:not(.p-button-rounded):not(.p-button-icon-only) {
+    padding: 0.75rem 1.75rem;
+  }
+
+  &:not(.p-button-text):not(.p-button-outlined) {
+    background: $sky-lagoon-deep;
+    border-color: $sky-lagoon-deep;
+    box-shadow: $sky-shadow-sm;
+
+    &:hover {
+      background: $sky-charcoal !important;
+      border-color: $sky-charcoal !important;
+      box-shadow: $sky-shadow-md;
+      transform: translateY(-1px);
+    }
+  }
+
+  &.p-button-secondary {
+    background: $sky-surface-soft;
+    border-color: $sky-border;
+    color: $sky-text-primary;
+  }
+
+  &.p-button-text {
+    color: $sky-text-primary;
+
+    &:hover { background: $sky-warm-white !important; }
+  }
+
+  &.p-button-rounded {
+    border-radius: 50% !important;
+    width: $sky-touch-target;
+    height: $sky-touch-target;
+  }
+
+  &.p-button-sm {
+    min-height: 36px;
+    padding: 0.4rem 1.25rem;
+    font-size: 0.875rem;
+  }
+}
+
+// =============================================================================
+// Inputs
+// =============================================================================
+.p-inputtext,
+.p-multiselect,
+.p-dropdown {
+  border-radius: $sky-radius-sm !important;
+  border-color: $sky-border !important;
+  background: $sky-surface;
+  font-family: $sky-font-family;
+}
+
+.p-inputtext:focus,
+.p-multiselect:not(.p-disabled).p-focus,
+.p-dropdown:not(.p-disabled).p-focus {
+  @include sky-focus-ring;
+}
+
+// =============================================================================
+// Dialogs
+// =============================================================================
+.p-dialog {
+  border-radius: $sky-radius-lg !important;
+  overflow: hidden;
+  box-shadow: $sky-shadow-lg !important;
+
+  .p-dialog-header {
+    background: $sky-surface;
+    border-bottom: 1px solid $sky-border;
+    padding: 1.25rem $sky-space-lg;
+  }
+
+  .p-dialog-content {
+    padding: $sky-space-lg;
+  }
+
+  .p-dialog-footer {
+    border-top: 1px solid $sky-border;
+    padding: $sky-space-md $sky-space-lg;
+    background: $sky-surface-soft;
+  }
+}
+
+// =============================================================================
+// Profile Color Pills
+// =============================================================================
+.sky-person-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: $sky-radius-pill;
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: rgba(0, 0, 0, 0.04);
+  color: $sky-text-primary;
+}
+
+.sky-person-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+// =============================================================================
+// Calendar (FullCalendar) Skylight Styling
+// =============================================================================
+.fc {
+  --fc-border-color:                 #{$sky-border};
+  --fc-button-bg-color:              #{$sky-surface};
+  --fc-button-border-color:          #{$sky-border};
+  --fc-button-text-color:            #{$sky-text-primary};
+  --fc-button-hover-bg-color:        #{$sky-warm-white};
+  --fc-button-hover-border-color:    #{$sky-border};
+  --fc-button-active-bg-color:       #{$sky-lagoon-deep};
+  --fc-button-active-border-color:   #{$sky-lagoon-deep};
+  --fc-today-bg-color:               #{rgba($sky-lagoon, 0.08)};
+  --fc-now-indicator-color:          #{$sky-coral};
+  --fc-event-bg-color:               #{$sky-lagoon-deep};
+  --fc-event-border-color:           #{$sky-lagoon-deep};
+  --fc-event-text-color:             #ffffff;
+  --fc-list-event-hover-bg-color:    #{$sky-warm-white};
+  font-family: $sky-font-family;
+
+  .fc-toolbar-title {
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.02em;
+    color: $sky-text-primary;
+  }
+
+  .fc-button {
+    border-radius: $sky-radius-pill !important;
+    padding: 0.4rem 1rem !important;
+    font-weight: 500 !important;
+    text-transform: capitalize;
+    box-shadow: none !important;
+  }
+
+  .fc-button-primary:not(:disabled).fc-button-active {
+    color: white !important;
+  }
+
+  .fc-col-header-cell {
+    background: $sky-surface-soft;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    padding: 0.6rem 0;
+  }
+
+  .fc-daygrid-day-number,
+  .fc-col-header-cell-cushion {
+    color: $sky-text-primary;
+    text-decoration: none !important;
+  }
+
+  .fc-daygrid-day.fc-day-today {
+    background-color: rgba($sky-lagoon, 0.08);
+  }
+
+  // Time grid specifics --------------------------------------------------------
+  .fc-timegrid-slot {
+    height: 3em;
+    border-color: rgba($sky-charcoal, 0.05);
+  }
+
+  .fc-timegrid-slot-label {
+    border: none !important;
+    color: $sky-text-secondary;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    vertical-align: top;
+    padding-right: 0.6rem;
+  }
+
+  .fc-timegrid-axis-cushion,
+  .fc-timegrid-slot-label-cushion {
+    padding: 0 0.5rem;
+  }
+
+  .fc-timegrid-now-indicator-line {
+    border-width: 2px 0 0 0;
+    border-color: $sky-coral;
+  }
+
+  .fc-timegrid-now-indicator-arrow {
+    border-color: $sky-coral;
+    border-width: 5px;
+  }
+
+  // Cascade overlapping events with subtle gap (Google Calendar style)
+  .fc-timegrid-event-harness {
+    margin-right: 2px;
+  }
+
+  // List / Agenda view --------------------------------------------------------
+  .fc-list {
+    border: none;
+    background: transparent;
+  }
+
+  // Day header row separating each day's events
+  .fc-list-day {
+    & > th {
+      background: $sky-surface-soft !important;
+      border: none !important;
+      border-top: 1px solid $sky-border !important;
+    }
+  }
+
+  .fc-list-day-cushion {
+    background: $sky-surface-soft !important;
+    padding: 0.7rem 1.25rem !important;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: $sky-text-primary;
+    letter-spacing: -0.01em;
+    text-transform: none;
+  }
+
+  .fc-list-event {
+    cursor: pointer;
+
+    & > td {
+      padding: 0.85rem 1.25rem;
+      border-color: $sky-border;
+      vertical-align: middle;
+    }
+
+    &:hover td {
+      background: $sky-warm-white !important;
+    }
+  }
+
+  // Bigger color dot — uses event background color naturally
+  .fc-list-event-graphic {
+    padding-right: 0.5rem !important;
+    width: 1.4rem;
+  }
+
+  .fc-list-event-dot {
+    border-width: 7px !important;
+    border-radius: 50%;
+  }
+
+  // Time column — emphasise the chronological stacking
+  .fc-list-event-time {
+    color: $sky-text-secondary;
+    font-weight: 600;
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+    width: 11rem;
+    white-space: nowrap;
+  }
+
+  .fc-list-event-title {
+    font-weight: 500;
+    font-size: 0.95rem;
+    color: $sky-text-primary;
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+  }
+
+  .fc-list-empty {
+    background: transparent;
+    color: $sky-text-secondary;
+    padding: 3rem 1rem;
+    font-style: normal;
+  }
+}
+
+// Event styling — solid, opaque, with cascade-friendly subtle separation
+.fc-event {
+  border-radius: $sky-radius-sm !important;
+  border-left: 3px solid rgba(0, 0, 0, 0.18) !important;
+  border-top: none !important;
+  border-right: none !important;
+  border-bottom: none !important;
+  padding: 3px 6px !important;
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
+  opacity: 1 !important;
+  box-shadow: 0 1px 2px rgba($sky-charcoal, 0.12);
+  cursor: pointer;
+  overflow: hidden;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+
+  &:hover {
+    box-shadow: 0 2px 6px rgba($sky-charcoal, 0.18);
+    z-index: 5;
+  }
+}
+
+// TimeGrid block events: full content stack (time + title), no vertical clipping
+.fc-timegrid-event {
+  // Ensure short events still display all text — let the card grow if needed
+  min-height: 56px;
+
+  .fc-event-main {
+    padding: 3px 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    overflow: visible;
+  }
+
+  .fc-event-main-frame {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 0;
+  }
+
+  .fc-event-time {
+    font-weight: 600;
+    font-size: 0.72rem;
+    opacity: 0.95;
+    margin-bottom: 1px;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .fc-event-title-container {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .fc-event-title {
+    font-weight: 500;
+    line-height: 1.25;
+    white-space: normal;
+    word-break: break-word;
+    overflow: visible;
+  }
+}
+
+// DayGrid month-view event pills stay compact but solid
+.fc-daygrid-event {
+  padding: 1px 6px !important;
+
+  .fc-event-time {
+    font-weight: 600;
+    margin-right: 4px;
+    opacity: 0.9;
+  }
+}
+
+// "+N more" link
+.fc-daygrid-more-link {
+  color: $sky-lagoon-deep !important;
+  font-weight: 500;
+  font-size: 0.75rem;
+}
+
+
+// =============================================================================
+// Progress Bars
+// =============================================================================
+.p-progressbar {
+  border-radius: $sky-radius-pill !important;
+  background: rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+
+  .p-progressbar-value {
+    background: linear-gradient(90deg, $sky-sage 0%, $sky-lagoon 100%) !important;
+    border-radius: $sky-radius-pill;
+  }
+}
+
+// =============================================================================
+// Sidebar
+// =============================================================================
+.p-sidebar {
+  border-radius: 0 $sky-radius-lg $sky-radius-lg 0 !important;
+  background: $sky-surface !important;
+  box-shadow: $sky-shadow-lg !important;
+
+  .p-sidebar-header {
+    padding: 1.25rem $sky-space-lg;
+    border-bottom: 1px solid $sky-border;
+  }
+
+  .p-sidebar-content {
+    padding: $sky-space-md;
+  }
+}
+
+// =============================================================================
+// Multi-Select chips
+// =============================================================================
+.p-multiselect-token,
+.p-chips-token {
+  border-radius: $sky-radius-pill !important;
+  background: $sky-warm-white !important;
+  color: $sky-text-primary !important;
+  padding: 0.25rem 0.75rem !important;
+}
+
+// =============================================================================
+// Empty States
+// =============================================================================
+.sky-empty-state {
+  text-align: center;
+  padding: 3rem $sky-space-lg;
+  color: $sky-text-secondary;
+
+  .pi {
+    font-size: 3rem;
+    margin-bottom: $sky-space-md;
+    display: block;
+    color: $sky-sage;
+    opacity: 0.6;
+  }
+}
+
+// =============================================================================
+// Touch & Mobile
+// =============================================================================
+@media (hover: none) {
+  .p-button:hover {
+    transform: none !important;
+  }
+}
+
+// =============================================================================
+// Subtle Animations
+// =============================================================================
+@keyframes sky-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.sky-fade-in {
+  animation: sky-fade-in 0.3s ease-out;
+}
+
+// =============================================================================
+// View-mode switch (Week / Month / Day)
+// =============================================================================
+.sky-view-switch {
+  display: inline-flex;
+  background: rgba($sky-charcoal, 0.05);
+  border-radius: $sky-radius-pill;
+  padding: 2px;
+  margin-right: 0.4rem;
+}
+
+.sky-view-switch-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: $sky-text-secondary;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.35rem 0.85rem;
+  border-radius: $sky-radius-pill;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    color: $sky-text-primary;
+  }
+
+  &.active {
+    background: $sky-surface;
+    color: $sky-text-primary;
+    box-shadow: $sky-shadow-sm;
+  }
+}
+
+// =============================================================================
+// Week tile grid — 7 day tiles + 1 control tile
+// =============================================================================
+.sky-week-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: 1fr 1fr;
+  gap: 0.6rem;
+  padding: 0.6rem;
+  overflow: hidden;
+  min-height: 0;
+
+  @include sky-down($bp-lg) {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(4, minmax(180px, 1fr));
+    overflow-y: auto;
+  }
+
+  @include sky-down($bp-sm) {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(8, minmax(160px, auto));
+  }
+}
+
+.sky-day-tile {
+  display: flex;
+  flex-direction: column;
+  background: $sky-surface;
+  border: 1px solid $sky-border;
+  border-radius: $sky-radius-md;
+  overflow: hidden;
+  min-height: 0;
+  transition: box-shadow 0.15s ease;
+
+  &:hover {
+    box-shadow: $sky-shadow-sm;
+  }
+
+  &.today {
+    border-color: $sky-lagoon;
+    box-shadow: 0 0 0 1px $sky-lagoon;
+  }
+}
+
+.sky-day-tile-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0.55rem 0.85rem;
+  background: $sky-surface-soft;
+  border-bottom: 1px solid $sky-border;
+  flex-shrink: 0;
+
+  .sky-day-tile.today & {
+    background: rgba($sky-lagoon, 0.12);
+  }
+}
+
+.sky-day-tile-name {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: $sky-text-secondary;
+
+  .sky-day-tile.today & {
+    color: $sky-lagoon-deep;
+  }
+}
+
+.sky-day-tile-num {
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: $sky-text-primary;
+  font-variant-numeric: tabular-nums;
+
+  .sky-day-tile.today & {
+    color: $sky-lagoon-deep;
+  }
+}
+
+.sky-day-tile-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sky-day-tile-empty {
+  text-align: center;
+  font-size: 0.8rem;
+  color: $sky-text-secondary;
+  padding: 1rem 0.5rem;
+  opacity: 0.7;
+}
+
+// Event card inside a day tile
+.sky-day-event {
+  appearance: none;
+  text-align: left;
+  width: 100%;
+  border: none;
+  border-left: 3px solid $sky-lagoon-deep;
+  background: rgba($sky-lagoon, 0.08);
+  border-radius: $sky-radius-sm;
+  padding: 0.4rem 0.55rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  transition: background 0.15s ease, transform 0.15s ease;
+  flex-shrink: 0;
+
+  &:hover {
+    transform: translateX(1px);
+    filter: brightness(0.97);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba($sky-lagoon, 0.45);
+  }
+}
+
+.sky-day-event-time {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: $sky-text-secondary;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.sky-day-event-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: $sky-text-primary;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.sky-day-event-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  color: $sky-text-secondary;
+  margin-top: 0.1rem;
+
+  .pi {
+    font-size: 0.7rem;
+  }
+
+  span {
+    @include sky-truncate;
+  }
+}
+
+// 8th tile — week navigation + add event
+.sky-control-tile {
+  background: linear-gradient(135deg, rgba($sky-lagoon, 0.08) 0%, rgba($sky-sage, 0.10) 100%);
+  border-style: dashed;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  gap: 0.85rem;
+}
+
+.sky-control-tile-range {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: $sky-text-primary;
+  text-align: center;
+}
+
+.sky-control-tile-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.sky-control-tile-add {
+  width: 100%;
+  max-width: 200px;
+}
+
+// =============================================================================
+// Create Event form (inside Dialog)
+// =============================================================================
+.sky-create-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.sky-create-form-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem 0.75rem;
+  border-bottom: 1px solid $sky-border;
+}
+
+.sky-create-form-overline {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: $sky-lagoon-deep;
+  margin-bottom: 0.3rem;
+}
+
+.sky-create-form-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: $sky-text-primary;
+}
+
+.sky-create-form-body {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.sky-create-form-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.85rem 1.5rem 1.25rem;
+  border-top: 1px solid $sky-border;
+  background: $sky-surface-soft;
+  border-bottom-left-radius: $sky-radius-md;
+  border-bottom-right-radius: $sky-radius-md;
+}
+
+.sky-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+
+  &.sky-field-inline {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+    font-size: 0.85rem;
+    color: $sky-text-primary;
+
+    input[type='checkbox'] {
+      accent-color: $sky-lagoon-deep;
+      width: 1rem;
+      height: 1rem;
+      cursor: pointer;
+    }
+  }
+}
+
+.sky-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+
+  @include sky-down($bp-sm) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sky-field-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: $sky-text-secondary;
+}
+
+.sky-input {
+  appearance: none;
+  width: 100%;
+  font: inherit;
+  font-size: 0.9rem;
+  color: $sky-text-primary;
+  background: $sky-surface;
+  border: 1px solid $sky-border-strong;
+  border-radius: $sky-radius-sm;
+  padding: 0.55rem 0.7rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &::placeholder {
+    color: rgba($sky-text-secondary, 0.7);
+  }
+
+  &:hover {
+    border-color: rgba($sky-lagoon, 0.5);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $sky-lagoon;
+    box-shadow: 0 0 0 3px rgba($sky-lagoon, 0.18);
+  }
+}
+
+.sky-textarea {
+  resize: vertical;
+  min-height: 4.5rem;
+  font-family: inherit;
+  line-height: 1.45;
+}
+
+.sky-form-error {
+  background: rgba($sky-coral, 0.15);
+  color: color.scale($sky-coral, $lightness: -35%);
+  border: 1px solid rgba($sky-coral, 0.4);
+  border-radius: $sky-radius-sm;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+// =============================================================================
+// Event detail dialog — clickable location chip
+// =============================================================================
+.sky-event-location {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  background: rgba($sky-lagoon, 0.10);
+  border: 1px solid rgba($sky-lagoon, 0.25);
+  border-radius: $sky-radius-sm;
+  color: $sky-lagoon-deep;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.3;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  word-break: break-word;
+
+  .pi-map-marker {
+    font-size: 0.95rem;
+    flex-shrink: 0;
+  }
+
+  .sky-event-location-ext {
+    font-size: 0.75rem;
+    opacity: 0.65;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  &:hover {
+    background: rgba($sky-lagoon, 0.18);
+    border-color: rgba($sky-lagoon, 0.45);
+    transform: translateY(-1px);
+
+    .sky-event-location-ext {
+      opacity: 1;
+    }
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba($sky-lagoon, 0.3);
+  }
+}

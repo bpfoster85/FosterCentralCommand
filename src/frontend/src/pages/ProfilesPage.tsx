@@ -6,7 +6,7 @@ import { ProgressBar } from 'primereact/progressbar'
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog'
 import { useProfiles } from '../hooks/useProfiles'
 import ProfileCard from '../components/profiles/ProfileCard'
-import { Profile } from '../types'
+import type { Profile } from '../types'
 
 const PROFILE_COLORS = ['#4CAF50', '#2196F3', '#F44336', '#FF9800', '#9C27B0', '#00BCD4', '#E91E63', '#795548']
 

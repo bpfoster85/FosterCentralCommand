@@ -1,0 +1,42 @@
+// =============================================================================
+// Skylight Mixins
+// =============================================================================
+
+@use 'tokens' as *;
+
+// Soft card surface used by widgets, dialogs, lists, etc.
+@mixin sky-surface($radius: $sky-radius-md, $shadow: $sky-shadow-sm) {
+  background: $sky-surface;
+  border: 1px solid $sky-border;
+  border-radius: $radius;
+  box-shadow: $shadow;
+}
+
+// Touch-friendly minimum hit target.
+@mixin sky-touch {
+  min-height: $sky-touch-target;
+  min-width:  $sky-touch-target;
+}
+
+// Skylight focus ring.
+@mixin sky-focus-ring($color: $sky-lagoon) {
+  outline: none;
+  border-color: $color !important;
+  box-shadow: 0 0 0 3px rgba($color, 0.2) !important;
+}
+
+// Responsive media helpers.
+@mixin sky-up($bp) {
+  @media (min-width: $bp) { @content; }
+}
+
+@mixin sky-down($bp) {
+  @media (max-width: ($bp - 1)) { @content; }
+}
+
+// Truncate text with ellipsis.
+@mixin sky-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

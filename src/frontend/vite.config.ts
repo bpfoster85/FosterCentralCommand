@@ -30,10 +30,21 @@ export default defineConfig({
       }
     })
   ],
+  optimizeDeps: {
+    include: [
+      '@fullcalendar/core',
+      '@fullcalendar/daygrid',
+      '@fullcalendar/timegrid',
+      '@fullcalendar/list',
+      '@fullcalendar/interaction',
+      '@fullcalendar/google-calendar',
+      '@fullcalendar/react',
+    ]
+  },
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'http://localhost:5076',
         changeOrigin: true
       }
     }

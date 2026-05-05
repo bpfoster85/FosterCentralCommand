@@ -2,8 +2,7 @@
   <Folder Name="/api/">
     <Project Path="api/FosterCentralCommand.Api/FosterCentralCommand.Api.csproj" />
   </Folder>
-  <Folder Name="/aspire/">
-    <Project Path="aspire/AppHost/AppHost.csproj" />
-    <Project Path="aspire/ServiceDefaults/ServiceDefaults.csproj" />
+  <Folder Name="/tests/">
+    <Project Path="tests/FosterCentralCommand.Api.Tests/FosterCentralCommand.Api.Tests.csproj" />
   </Folder>
 </Solution>

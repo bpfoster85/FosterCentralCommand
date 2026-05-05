@@ -13,3 +13,13 @@ public record CalendarEventDto(
     string CalendarId,
     DateTime UpdatedAt
 );
+
+public record CreateCalendarEventDto(
+    string Title,
+    DateTime Start,
+    DateTime End,
+    bool AllDay,
+    string? Description,
+    string? Location,
+    List<string>? AttendeeEmails
+);

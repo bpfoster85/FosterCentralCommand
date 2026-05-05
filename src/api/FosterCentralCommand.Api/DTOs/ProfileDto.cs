@@ -8,6 +8,7 @@ public record ProfileDto(
     string Email,
     string Color,
     string? AvatarUrl,
+    int TotalStars,
     DateTime CreatedAt,
     DateTime UpdatedAt
 );
@@ -24,4 +25,8 @@ public record UpdateProfileRequest(
     [EmailAddress][MaxLength(200)] string? Email,
     [MaxLength(20)] string? Color,
     string? AvatarUrl
+);
+
+public record AdjustStarsRequest(
+    [Required] int Delta
 );

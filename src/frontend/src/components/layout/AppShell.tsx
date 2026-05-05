@@ -1,86 +1,74 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { Sidebar } from 'primereact/sidebar'
-import { Button } from 'primereact/button'
-import { TabMenu } from 'primereact/tabmenu'
 
 const navItems = [
   { label: 'Dashboard', icon: 'pi pi-home', path: '/command-center' },
   { label: 'Calendar', icon: 'pi pi-calendar', path: '/calendar' },
   { label: 'Lists', icon: 'pi pi-list', path: '/lists' },
+  { label: 'Chores', icon: 'pi pi-star', path: '/chores' },
   { label: 'Profiles', icon: 'pi pi-users', path: '/profiles' },
+  { label: 'Admin', icon: 'pi pi-shield', path: '/admin' },
 ]
+
+const TIME_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+  timeZone: 'America/Denver',
+})
+
+const useMstClock = () => {
+  const [time, setTime] = useState(() => TIME_FORMATTER.format(new Date()))
+  useEffect(() => {
+    // Sync the first tick to the next minute boundary, then tick every 60s.
+    const now = new Date()
+    const msUntilNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds()
+    let intervalId: number | undefined
+    const timeoutId = window.setTimeout(() => {
+      setTime(TIME_FORMATTER.format(new Date()))
+      intervalId = window.setInterval(() => {
+        setTime(TIME_FORMATTER.format(new Date()))
+      }, 60_000)
+    }, msUntilNextMinute)
+    return () => {
+      window.clearTimeout(timeoutId)
+      if (intervalId !== undefined) window.clearInterval(intervalId)
+    }
+  }, [])
+  return time
+}
 
 const AppShell: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const [sidebarVisible, setSidebarVisible] = useState(false)
+  const time = useMstClock()
 
-  const activeIndex = navItems.findIndex(item => location.pathname.startsWith(item.path))
+  const isActive = (path: string) => location.pathname.startsWith(path)
 
   return (
     <div className="fullscreen-container">
-      {/* Top Navigation Bar */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0.5rem 1rem',
-          background: 'var(--primary-color)',
-          color: 'var(--primary-color-text)',
-          flexShrink: 0,
-          zIndex: 100,
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-        }}
-      >
-        <Button
-          icon="pi pi-bars"
-          className="p-button-text p-button-plain"
-          style={{ color: 'white', marginRight: '0.5rem' }}
-          onClick={() => setSidebarVisible(true)}
-        />
-        <span style={{ fontSize: '1.2rem', fontWeight: 700, flex: 1 }}>
-          Foster Central Command
-        </span>
-      </div>
-
-      {/* Tab Navigation */}
-      <TabMenu
-        model={navItems.map((item) => ({
-          ...item,
-          command: () => navigate(item.path)
-        }))}
-        activeIndex={activeIndex >= 0 ? activeIndex : 0}
-        onTabChange={e => navigate(navItems[e.index].path)}
-        style={{ flexShrink: 0 }}
-      />
+      {/* Pill Tab Navigation — always on top */}
+      <nav className="sky-nav-tabs">
+        <div className="sky-nav-clock" aria-label={`Current time, Mountain Time: ${time}`}>
+          <span className="sky-nav-clock-time">{time.replace(' ', '')}</span>
+          <span className="sky-nav-clock-zone">MST</span>
+        </div>
+        {navItems.map(item => (
+          <button
+            key={item.path}
+            className={`sky-nav-tab ${isActive(item.path) ? 'active' : ''}`}
+            onClick={() => navigate(item.path)}
+          >
+            <i className={item.icon} />
+            <span>{item.label}</span>
+          </button>
+        ))}
+      </nav>
 
       {/* Main Content */}
-      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <Outlet />
-      </div>
-
-      {/* Sidebar Menu */}
-      <Sidebar
-        visible={sidebarVisible}
-        onHide={() => setSidebarVisible(false)}
-        style={{ width: '280px' }}
-      >
-        <h3 style={{ marginBottom: '1rem' }}>Navigation</h3>
-        {navItems.map(item => (
-          <Button
-            key={item.path}
-            label={item.label}
-            icon={item.icon}
-            className="p-button-text w-full"
-            style={{ justifyContent: 'flex-start', marginBottom: '0.5rem' }}
-            onClick={() => {
-              navigate(item.path)
-              setSidebarVisible(false)
-            }}
-          />
-        ))}
-      </Sidebar>
+      </main>
     </div>
   )
 }

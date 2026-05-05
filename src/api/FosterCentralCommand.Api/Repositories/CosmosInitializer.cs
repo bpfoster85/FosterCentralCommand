@@ -23,6 +23,18 @@ public static class CosmosInitializer
                 PartitionKeyPath = "/id"
             });
 
+            await db.CreateContainerIfNotExistsAsync(new ContainerProperties
+            {
+                Id = options.GoalsContainer,
+                PartitionKeyPath = "/id"
+            });
+
+            await db.CreateContainerIfNotExistsAsync(new ContainerProperties
+            {
+                Id = options.ChoresContainer,
+                PartitionKeyPath = "/id"
+            });
+
             logger.LogInformation("CosmosDB database '{Database}' and containers initialized.", options.DatabaseName);
         }
         catch (Exception ex)

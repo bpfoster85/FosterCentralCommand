@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Profile } from '../types'
+import type { Profile } from '../types'
 import * as profilesApi from '../api/profiles'
 
 export const useProfiles = () => {
@@ -22,7 +22,7 @@ export const useProfiles = () => {
 
   useEffect(() => { fetchProfiles() }, [fetchProfiles])
 
-  const createProfile = async (data: Omit<Profile, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const createProfile = async (data: Omit<Profile, 'id' | 'createdAt' | 'updatedAt' | 'totalStars'>) => {
     const profile = await profilesApi.createProfile(data)
     setProfiles(prev => [...prev, profile])
     return profile
@@ -39,5 +39,11 @@ export const useProfiles = () => {
     setProfiles(prev => prev.filter(p => p.id !== id))
   }
 
-  return { profiles, loading, error, refetch: fetchProfiles, createProfile, updateProfile, deleteProfile }
+  const adjustStars = async (id: string, delta: number) => {
+    const updated = await profilesApi.adjustProfileStars(id, delta)
+    setProfiles(prev => prev.map(p => p.id === id ? updated : p))
+    return updated
+  }
+
+  return { profiles, loading, error, refetch: fetchProfiles, createProfile, updateProfile, deleteProfile, adjustStars }
 }

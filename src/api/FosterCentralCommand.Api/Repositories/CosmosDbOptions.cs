@@ -9,4 +9,6 @@ public class CosmosDbOptions
     public string DatabaseName { get; set; } = "fostercc";
     public string ProfilesContainer { get; set; } = "profiles";
     public string ShoppingListsContainer { get; set; } = "shoppingLists";
+    public string GoalsContainer { get; set; } = "goals";
+    public string ChoresContainer { get; set; } = "chores";
 }

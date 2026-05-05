@@ -20,6 +20,9 @@ dist-ssr/
 !.env.example
 *.secrets.json
 appsettings.*.Local.json
+google-service-account.json
+google-credentials.json
+*-service-account.json
 
 # -------------------------------------------------------
 # Ignore Visual Studio temporary files, build results, and
