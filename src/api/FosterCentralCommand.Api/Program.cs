@@ -1,6 +1,9 @@
 using Microsoft.Azure.Cosmos;
 using System.Text.Json.Serialization;
+using FosterCentralCommand.Api.Middleware;
+using FosterCentralCommand.Api.Models;
 using FosterCentralCommand.Api.Repositories;
+using FosterCentralCommand.Api.Security;
 using FosterCentralCommand.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,7 +26,8 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins("http://localhost:5173", "http://localhost:3000")
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .WithExposedHeaders(FamilyContextMiddleware.HeaderName);
     });
 });
 
@@ -47,6 +51,10 @@ builder.Services.AddScoped<IProfileRepository, CosmosProfileRepository>();
 builder.Services.AddScoped<IShoppingListRepository, CosmosShoppingListRepository>();
 builder.Services.AddScoped<IGoalRepository, CosmosGoalRepository>();
 builder.Services.AddScoped<IChoreRepository, CosmosChoreRepository>();
+builder.Services.AddScoped<IFamilyRepository, CosmosFamilyRepository>();
+
+// Per-request family context populated by FamilyContextMiddleware.
+builder.Services.AddScoped<FamilyContext>();
 
 // In-process distributed cache
 builder.Services.AddDistributedMemoryCache();
@@ -63,9 +71,79 @@ using (var scope = app.Services.CreateScope())
     var options = scope.ServiceProvider.GetRequiredService<CosmosDbOptions>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
     await CosmosInitializer.InitializeAsync(cosmosClient, options, logger);
+
+    // One-time migration: if no families exist yet but legacy Google config is
+    // present, seed a "Default" family from it so existing deployments keep
+    // working. The id is logged so the dev can plug it into the frontend.
+    var familyRepo = scope.ServiceProvider.GetRequiredService<IFamilyRepository>();
+    var existing = (await familyRepo.GetAllAsync()).ToList();
+    if (existing.Count == 0)
+    {
+        var calId = builder.Configuration["Google:CalendarId"];
+        var apiKey = builder.Configuration["Google:ApiKey"];
+        var saPath = builder.Configuration["Google:ServiceAccountKeyPath"];
+        string? saJson = null;
+        if (!string.IsNullOrEmpty(saPath) && File.Exists(saPath))
+        {
+            saJson = await File.ReadAllTextAsync(saPath);
+        }
+
+        if (!string.IsNullOrEmpty(calId) || !string.IsNullOrEmpty(apiKey) || !string.IsNullOrEmpty(saJson))
+        {
+            // Bootstrap password — read from config (Bootstrap:DefaultFamilyPassword)
+            // so the dev can override it via user-secrets. Falls back to a known
+            // dev value and the family password can be rotated via PUT /api/families.
+            var bootstrapPassword =
+                builder.Configuration["Bootstrap:DefaultFamilyPassword"] ?? "fostercc";
+
+            var seeded = await familyRepo.CreateAsync(new Family
+            {
+                Name = "Default",
+                NameNormalized = "default",
+                GoogleCalendarId = calId,
+                GoogleApiKey = apiKey,
+                GoogleServiceAccountJson = saJson,
+                PasswordHash = PasswordHasher.Hash(bootstrapPassword),
+            });
+            logger.LogInformation(
+                "Seeded default family {FamilyId}. Login with name=\"Default\" password=\"{Password}\".",
+                seeded.Id, bootstrapPassword);
+        }
+        else
+        {
+            logger.LogInformation(
+                "No families exist and no Google config available to seed one. Create a family via POST /api/families.");
+        }
+    }
+    else
+    {
+        // Backfill NameNormalized / PasswordHash for families created before
+        // login was added so existing families can still sign in.
+        foreach (var f in existing)
+        {
+            var dirty = false;
+            if (string.IsNullOrEmpty(f.NameNormalized) && !string.IsNullOrEmpty(f.Name))
+            {
+                f.NameNormalized = f.Name.Trim().ToLowerInvariant();
+                dirty = true;
+            }
+            if (string.IsNullOrEmpty(f.PasswordHash))
+            {
+                var bootstrapPassword =
+                    builder.Configuration["Bootstrap:DefaultFamilyPassword"] ?? "fostercc";
+                f.PasswordHash = PasswordHasher.Hash(bootstrapPassword);
+                dirty = true;
+                logger.LogWarning(
+                    "Family {FamilyId} ({Name}) had no password — seeded \"{Password}\". Rotate via PUT /api/families.",
+                    f.Id, f.Name, bootstrapPassword);
+            }
+            if (dirty) await familyRepo.UpdateAsync(f);
+        }
+    }
 }
 
 app.UseCors();
+app.UseMiddleware<FamilyContextMiddleware>();
 app.MapControllers();
 
 app.Run();
