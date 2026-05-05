@@ -11,15 +11,17 @@ namespace FosterCentralCommand.Api.Controllers;
 ///
 /// On success the family-login endpoint returns the family id which the
 /// frontend stores in localStorage and replays as <c>X-Family-Id</c> on every
-/// subsequent request.
+/// subsequent request. Admin endpoints similarly return an opaque admin key
+/// (the family's hashed admin password) for replay as <c>X-Admin-Key</c>.
 /// </summary>
 [ApiController]
 [Route("api/auth")]
 public class AuthController(
     IFamilyRepository familyRepo,
-    IConfiguration configuration,
     ILogger<AuthController> logger) : ControllerBase
 {
+    private const string FamilyIdHeader = "X-Family-Id";
+
     /// <summary>Verify a family name + password and return the family id.</summary>
     [HttpPost("family-login")]
     public async Task<ActionResult<FamilyLoginResponse>> FamilyLogin([FromBody] FamilyLoginRequest request)
@@ -46,35 +48,95 @@ public class AuthController(
         return Ok(new FamilyLoginResponse(Guid.Parse(family.Id), family.Name));
     }
 
-    /// <summary>Verify the admin password (the configured Admin:ApiKey).</summary>
+    /// <summary>
+    /// Verify a family name + that family's admin password (stored hashed in
+    /// Cosmos as <c>Family.AdminPasswordHash</c>). When no admin password is
+    /// set yet, returns 409 with <c>needsSetup: true</c> so the client can
+    /// prompt the family-authed user to set one via <see cref="AdminSetPassword"/>.
+    /// </summary>
     [HttpPost("admin-login")]
-    public IActionResult AdminLogin([FromBody] AdminLoginRequest request)
+    public async Task<IActionResult> AdminLogin([FromBody] AdminLoginRequest request)
     {
         if (!ModelState.IsValid) return ValidationProblem(ModelState);
 
-        var configured = configuration["Admin:ApiKey"];
-        if (string.IsNullOrEmpty(configured))
+        var family = await familyRepo.GetByNameAsync(request.Name);
+        // Run verify even when family is null to keep timing similar.
+        var ok = PasswordHasher.Verify(request.Password, family?.AdminPasswordHash);
+
+        if (family is null)
         {
-            logger.LogWarning("Admin login attempted but Admin:ApiKey is not configured.");
-            return Unauthorized(new { error = "Admin login is not available." });
+            logger.LogWarning("Failed admin login for name {Name}", request.Name);
+            return Unauthorized(new { error = "Invalid family name or admin password." });
         }
 
-        if (!CryptographicEquals(request.Password, configured))
+        if (string.IsNullOrEmpty(family.AdminPasswordHash))
         {
-            logger.LogWarning("Failed admin login attempt.");
-            return Unauthorized(new { error = "Invalid admin password." });
+            // Tell the client to switch to set-up mode. Caller must be
+            // family-authed (X-Family-Id matches) to actually set it.
+            return Conflict(new
+            {
+                error = "No admin password is set for this family yet.",
+                needsSetup = true,
+                familyId = Guid.Parse(family.Id),
+                name = family.Name,
+            });
         }
 
-        // Echo the key back so the frontend can store it and send X-Admin-Key
-        // on subsequent admin calls. (No JWT/session for now — keeping it simple.)
-        return Ok(new { adminKey = configured });
+        if (!ok)
+        {
+            logger.LogWarning("Failed admin login for name {Name}", request.Name);
+            return Unauthorized(new { error = "Invalid family name or admin password." });
+        }
+
+        return Ok(new
+        {
+            adminKey = family.AdminPasswordHash,
+            familyId = Guid.Parse(family.Id),
+            name = family.Name,
+        });
     }
 
-    private static bool CryptographicEquals(string a, string b)
+    /// <summary>
+    /// Set the admin password for a family that does not yet have one. The
+    /// caller must be family-authed for the same family (X-Family-Id matches).
+    /// Once set, the password can only be rotated through an authenticated
+    /// admin path (not implemented here).
+    /// </summary>
+    [HttpPost("admin-set-password")]
+    public async Task<IActionResult> AdminSetPassword([FromBody] AdminSetPasswordRequest request)
     {
-        if (a.Length != b.Length) return false;
-        var diff = 0;
-        for (var i = 0; i < a.Length; i++) diff |= a[i] ^ b[i];
-        return diff == 0;
+        if (!ModelState.IsValid) return ValidationProblem(ModelState);
+
+        var family = await familyRepo.GetByNameAsync(request.Name);
+        if (family is null)
+        {
+            return Unauthorized(new { error = "Unknown family." });
+        }
+
+        var providedFamilyId = Request.Headers[FamilyIdHeader].ToString();
+        if (string.IsNullOrEmpty(providedFamilyId)
+            || !string.Equals(providedFamilyId.Trim(), family.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            logger.LogWarning("Admin-set-password for {Name} rejected: caller not family-authed.", request.Name);
+            return Unauthorized(new { error = "You must be signed in to this family to set its admin password." });
+        }
+
+        if (!string.IsNullOrEmpty(family.AdminPasswordHash))
+        {
+            return Conflict(new { error = "This family already has an admin password set." });
+        }
+
+        family.AdminPasswordHash = PasswordHasher.Hash(request.Password);
+        family.UpdatedAt = DateTime.UtcNow;
+        var updated = await familyRepo.UpdateAsync(family);
+
+        logger.LogInformation("Admin password set for family {FamilyId} ({Name})", updated.Id, updated.Name);
+
+        return Ok(new
+        {
+            adminKey = updated.AdminPasswordHash,
+            familyId = Guid.Parse(updated.Id),
+            name = updated.Name,
+        });
     }
 }

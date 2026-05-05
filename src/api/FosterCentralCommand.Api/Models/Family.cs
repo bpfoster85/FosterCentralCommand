@@ -32,6 +32,14 @@ public class Family
     /// </summary>
     public string? PasswordHash { get; set; }
 
+    /// <summary>
+    /// PBKDF2-SHA256 hash of the per-family admin password. Same encoded
+    /// format as <see cref="PasswordHash"/>. When null, the family has no
+    /// admin password yet — the AdminLogin flow lets a family-authed user
+    /// set one once.
+    /// </summary>
+    public string? AdminPasswordHash { get; set; }
+
     /// <summary>Google Calendar id (typically an email address).</summary>
     public string? GoogleCalendarId { get; set; }
 

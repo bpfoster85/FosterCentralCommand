@@ -11,11 +11,11 @@ interface DashboardGridProps {
 }
 
 const DEFAULT_LAYOUTS: DashboardLayout[] = [
-  { i: 'calendar', x: 0, y: 0, w: 9, h: 8, minW: 4, minH: 4 },
-  { i: 'grocery', x: 9, y: 0, w: 3, h: 8, minW: 2, minH: 4 },
+  { i: 'calendar', x: 0, y: 0, w: 10, h: 8, minW: 4, minH: 4 },
+  { i: 'grocery', x: 10, y: 0, w: 2, h: 8, minW: 2, minH: 4 },
 ]
 
-const STORAGE_KEY = 'fcc_dashboard_layout'
+const STORAGE_KEY = 'fcc_dashboard_layout_v3'
 
 const loadLayout = (): DashboardLayout[] => {
   try {

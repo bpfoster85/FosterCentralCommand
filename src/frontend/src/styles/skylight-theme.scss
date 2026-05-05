@@ -400,6 +400,9 @@ h1, h2, h3, h4, h5, h6 {
 // =============================================================================
 // Inputs
 // =============================================================================
+// Larger hit areas + breathing room for hand/touch use. min-height matches
+// the 44px touch target token so single-line inputs feel comfortable on
+// touch screens; padding gives the text some space from the edges.
 .p-inputtext,
 .p-multiselect,
 .p-dropdown {
@@ -407,6 +410,25 @@ h1, h2, h3, h4, h5, h6 {
   border-color: $sky-border !important;
   background: $sky-surface;
   font-family: $sky-font-family;
+  min-height: $sky-touch-target;
+  padding: 0.7rem 0.95rem;
+  font-size: 1rem;
+}
+
+// Multi-line inputs grow vertically — drop the min-height but keep padding.
+textarea.p-inputtext,
+.p-inputtextarea {
+  min-height: 0;
+  padding: 0.7rem 0.95rem;
+}
+
+// PrimeReact wraps these — inner inputs need the padding too.
+.p-inputnumber-input,
+.p-dropdown .p-dropdown-label,
+.p-multiselect .p-multiselect-label {
+  min-height: $sky-touch-target;
+  padding: 0.7rem 0.95rem;
+  font-size: 1rem;
 }
 
 .p-inputtext:focus,

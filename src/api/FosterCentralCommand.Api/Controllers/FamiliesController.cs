@@ -7,44 +7,61 @@ using Microsoft.AspNetCore.Mvc;
 namespace FosterCentralCommand.Api.Controllers;
 
 /// <summary>
-/// Admin endpoints for managing tenants. These endpoints bypass the normal
-/// family gate (since callers are setting up a new family) and instead require
-/// an <c>X-Admin-Key</c> header that matches the configured
-/// <c>Admin:ApiKey</c> value (stored in user-secrets in Development, in Key
-/// Vault in Production).
+/// Per-family admin endpoints. Auth is now scoped to a single family: the
+/// caller must include both <c>X-Family-Id</c> and <c>X-Admin-Key</c>, where
+/// <c>X-Admin-Key</c> equals the family's <c>AdminPasswordHash</c> (the value
+/// echoed back from <c>POST /api/auth/admin-login</c>).
 ///
-/// Returned <see cref="FamilyDto"/> deliberately omits the raw Google
-/// credentials — it only signals whether they are configured.
+/// All read/update/delete operations are scoped to that one family. Create is
+/// allowed when the caller is admin-authed for any existing family, or when
+/// no families exist yet (initial bootstrap).
+///
+/// Returned <see cref="FamilyDto"/> deliberately omits credentials and the
+/// admin password hash — it only signals whether they are configured.
 /// </summary>
 [ApiController]
 [Route("api/families")]
 public class FamiliesController(
     IFamilyRepository familyRepo,
-    IConfiguration configuration,
     ILogger<FamiliesController> logger) : ControllerBase
 {
+    private const string FamilyIdHeader = "X-Family-Id";
     private const string AdminKeyHeader = "X-Admin-Key";
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<FamilyDto>>> GetAll()
     {
-        if (!IsAuthorized()) return Unauthorized(new { error = "Admin key required." });
-        var families = await familyRepo.GetAllAsync();
-        return Ok(families.Select(MapToDto));
+        var caller = await GetAuthorizedFamilyAsync();
+        if (caller is null) return Unauthorized(new { error = "Admin auth required." });
+
+        // Per-family admin: only return the caller's own family.
+        return Ok(new[] { MapToDto(caller) });
     }
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<FamilyDto>> GetById(Guid id)
     {
-        if (!IsAuthorized()) return Unauthorized(new { error = "Admin key required." });
-        var family = await familyRepo.GetByIdAsync(id.ToString());
-        return family is null ? NotFound() : Ok(MapToDto(family));
+        var caller = await GetAuthorizedFamilyAsync();
+        if (caller is null) return Unauthorized(new { error = "Admin auth required." });
+
+        if (!string.Equals(caller.Id, id.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            return Forbid();
+        }
+        return Ok(MapToDto(caller));
     }
 
     [HttpPost]
     public async Task<ActionResult<FamilyDto>> Create([FromBody] CreateFamilyRequest request)
     {
-        if (!IsAuthorized()) return Unauthorized(new { error = "Admin key required." });
+        // Allow creation when (a) no families exist yet (bootstrap) or
+        // (b) the caller is admin-authed for any existing family.
+        var anyExisting = (await familyRepo.GetAllAsync()).Any();
+        if (anyExisting)
+        {
+            var caller = await GetAuthorizedFamilyAsync();
+            if (caller is null) return Unauthorized(new { error = "Admin auth required." });
+        }
 
         var name = request.Name.Trim();
         var existing = await familyRepo.GetByNameAsync(name);
@@ -71,11 +88,15 @@ public class FamiliesController(
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<FamilyDto>> Update(Guid id, [FromBody] UpdateFamilyRequest request)
     {
-        if (!IsAuthorized()) return Unauthorized(new { error = "Admin key required." });
+        var caller = await GetAuthorizedFamilyAsync();
+        if (caller is null) return Unauthorized(new { error = "Admin auth required." });
 
-        var family = await familyRepo.GetByIdAsync(id.ToString());
-        if (family is null) return NotFound();
+        if (!string.Equals(caller.Id, id.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            return Forbid();
+        }
 
+        var family = caller;
         if (request.Name != null)
         {
             family.Name = request.Name.Trim();
@@ -94,26 +115,38 @@ public class FamiliesController(
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
-        if (!IsAuthorized()) return Unauthorized(new { error = "Admin key required." });
+        var caller = await GetAuthorizedFamilyAsync();
+        if (caller is null) return Unauthorized(new { error = "Admin auth required." });
 
-        var family = await familyRepo.GetByIdAsync(id.ToString());
-        if (family is null) return NotFound();
+        if (!string.Equals(caller.Id, id.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            return Forbid();
+        }
         await familyRepo.DeleteAsync(id.ToString());
         return NoContent();
     }
 
-    private bool IsAuthorized()
+    /// <summary>
+    /// Returns the caller's family iff <c>X-Family-Id</c> identifies a real
+    /// family AND <c>X-Admin-Key</c> matches that family's
+    /// <c>AdminPasswordHash</c> via constant-time comparison.
+    /// </summary>
+    private async Task<Family?> GetAuthorizedFamilyAsync()
     {
-        var configured = configuration["Admin:ApiKey"];
-        if (string.IsNullOrEmpty(configured))
+        var familyId = Request.Headers[FamilyIdHeader].ToString().Trim();
+        var adminKey = Request.Headers[AdminKeyHeader].ToString();
+        if (string.IsNullOrEmpty(familyId) || string.IsNullOrEmpty(adminKey))
         {
-            // No admin key configured at all => refuse rather than allow-by-default.
-            logger.LogWarning("Admin endpoint hit but Admin:ApiKey is not configured.");
-            return false;
+            return null;
         }
-        var provided = Request.Headers[AdminKeyHeader].ToString();
-        return !string.IsNullOrEmpty(provided)
-            && CryptographicEquals(provided, configured);
+
+        var family = await familyRepo.GetByIdAsync(familyId);
+        if (family is null || string.IsNullOrEmpty(family.AdminPasswordHash))
+        {
+            return null;
+        }
+
+        return CryptographicEquals(adminKey, family.AdminPasswordHash) ? family : null;
     }
 
     private static bool CryptographicEquals(string a, string b)

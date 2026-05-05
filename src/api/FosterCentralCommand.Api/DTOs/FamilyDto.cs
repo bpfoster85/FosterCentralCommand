@@ -36,7 +36,14 @@ public record FamilyLoginRequest(
 
 /// <summary>POST /api/auth/admin-login body.</summary>
 public record AdminLoginRequest(
+    [Required][MaxLength(120)] string Name,
     [Required][MaxLength(200)] string Password
+);
+
+/// <summary>POST /api/auth/admin-set-password body.</summary>
+public record AdminSetPasswordRequest(
+    [Required][MaxLength(120)] string Name,
+    [Required][MinLength(4)][MaxLength(200)] string Password
 );
 
 /// <summary>Response from a successful family login.</summary>

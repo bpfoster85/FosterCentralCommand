@@ -5,6 +5,7 @@ import { InputText } from 'primereact/inputtext'
 import { ProgressBar } from 'primereact/progressbar'
 import { useLists, useListItems } from '../../hooks/useLists'
 import type { Profile } from '../../types'
+import SwipeToDelete from './SwipeToDelete'
 
 interface GroceryWidgetProps {
   profiles: Profile[]
@@ -77,19 +78,18 @@ const GroceryWidget: React.FC<GroceryWidgetProps> = ({ profiles }) => {
           </div>
         ) : (
           <>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               <InputText
                 value={quickAdd}
                 onChange={e => setQuickAdd(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
                 placeholder="Add an item..."
                 className="w-full"
-                style={{ flex: 1 }}
               />
               <Button
                 label="Add"
                 icon="pi pi-plus"
-                className="p-button-sm"
+                className="p-button-sm w-full"
                 onClick={handleAdd}
                 disabled={!quickAdd.trim()}
               />
@@ -104,27 +104,22 @@ const GroceryWidget: React.FC<GroceryWidgetProps> = ({ profiles }) => {
                 </div>
               ) : (
                 items.map(item => (
-                  <div
-                    key={item.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.6rem',
-                      padding: '0.45rem 0.25rem',
-                      borderBottom: '1px solid var(--surface-border)',
-                    }}
-                  >
-                    <Checkbox checked={false} onChange={() => deleteItem(item.id)} />
-                    <span style={{ flex: 1, fontSize: '0.9rem' }}>
-                      {item.title}
-                    </span>
-                    <Button
-                      icon="pi pi-times"
-                      className="p-button-text p-button-sm p-button-rounded p-button-danger"
-                      onClick={() => deleteItem(item.id)}
-                      aria-label="Remove item"
-                    />
-                  </div>
+                  <SwipeToDelete key={item.id} onDelete={() => deleteItem(item.id)}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.6rem',
+                        padding: '0.45rem 0.25rem',
+                        borderBottom: '1px solid var(--surface-border)',
+                      }}
+                    >
+                      <Checkbox checked={false} onChange={() => deleteItem(item.id)} />
+                      <span style={{ flex: 1, fontSize: '0.9rem' }}>
+                        {item.title}
+                      </span>
+                    </div>
+                  </SwipeToDelete>
                 ))
               )}
             </div>

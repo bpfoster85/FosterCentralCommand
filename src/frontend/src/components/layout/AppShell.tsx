@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
+import {
+  clearAdminKey,
+  clearFamilySession,
+  getAdminKey,
+  getFamilyName,
+} from '../../api/apiClient'
 
 const navItems = [
   { label: 'Dashboard', icon: 'pi pi-home', path: '/command-center' },
@@ -42,8 +48,16 @@ const AppShell: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const time = useMstClock()
+  const familyName = getFamilyName()
+  const isAdmin = Boolean(getAdminKey())
 
   const isActive = (path: string) => location.pathname.startsWith(path)
+
+  const handleLogout = () => {
+    clearAdminKey()
+    clearFamilySession()
+    navigate('/login', { replace: true })
+  }
 
   return (
     <div className="fullscreen-container">
@@ -63,6 +77,19 @@ const AppShell: React.FC = () => {
             <span>{item.label}</span>
           </button>
         ))}
+        <button
+          className="sky-nav-tab"
+          onClick={handleLogout}
+          title={
+            familyName
+              ? `Sign out${isAdmin ? ' (admin)' : ''} — ${familyName}`
+              : 'Sign out'
+          }
+          style={{ marginLeft: 'auto' }}
+        >
+          <i className="pi pi-sign-out" />
+          <span>{familyName ? `Sign out (${familyName}${isAdmin ? ' · admin' : ''})` : 'Sign out'}</span>
+        </button>
       </nav>
 
       {/* Main Content */}
