@@ -10,11 +10,11 @@ A Progressive Web Application (PWA) family command center featuring a Google Cal
 | UI Components | PrimeReact + PrimeFlex |
 | Calendar | FullCalendar + Google Calendar API |
 | Dashboard | react-grid-layout (drag & resize) |
-| Backend | .NET 9 Web API |
+| Backend | .NET 10 Web API |
 | ORM | Entity Framework Core |
 | Database | PostgreSQL |
 | Cache | Azure Cache for Redis |
-| Infrastructure | Azure Bicep |
+| Container | Docker |
 | Hosting | Azure Container Apps |
 
 ## Project Structure
@@ -43,18 +43,8 @@ FosterCentralCommand/
 │   │       ├── Models/                  # EF Core entities
 │   │       └── Services/               # CalendarService (Google + Redis)
 
-│   └── FosterCentralCommand.sln         # .NET solution file
-└── infrastructure/
-    ├── main.bicep                        # Root Bicep template
-    ├── modules/                          # Reusable Bicep modules
-    │   ├── container-app.bicep
-    │   ├── container-apps-env.bicep
-    │   ├── log-analytics.bicep
-    │   ├── postgres.bicep
-    │   └── redis.bicep
-    └── parameters/
-        ├── dev.bicepparam
-        └── prod.bicepparam
+│   └── FosterCentralCommand.slnx        # .NET solution file
+└── Dockerfile                           # API container image (multi-stage, .NET 10)
 ```
 
 ## Features
@@ -89,7 +79,8 @@ FosterCentralCommand/
 ### Prerequisites
 
 - Node.js 20+
-- .NET 9 SDK
+- .NET 10 SDK
+- Docker (for building the API container image)
 - PostgreSQL 16
 - Redis (or Docker)
 - Google Calendar API key (optional, for calendar sync)
@@ -123,19 +114,25 @@ API runs at http://localhost:5076
 | `Google__CalendarId` | Google Calendar ID to sync |
 | `Google__ApiKey` | Google API Key with Calendar API enabled |
 
-### Deploy to Azure
+### Build and run the API container
+
+The `Dockerfile` at the repo root produces a framework-dependent ASP.NET image listening on port `8080`.
 
 ```bash
-az group create --name fcc-dev-rg --location eastus
+# Build (run from the repo root so the build context picks up src/api/)
+docker build -t fostercentralcommand-api:local .
 
-az deployment group create \
-  --resource-group fcc-dev-rg \
-  --template-file infrastructure/main.bicep \
-  --parameters infrastructure/parameters/dev.bicepparam \
-  --parameters postgresAdminPassword='<secure-password>' \
-  --parameters googleCalendarId='<calendar-id>' \
-  --parameters googleApiKey='<api-key>'
+# Run locally — pass config via env vars (double underscores map to nested keys)
+docker run --rm -p 8080:8080 \
+  -e CosmosDb__AccountEndpoint='https://<your-cosmos>.documents.azure.com:443/' \
+  -e CosmosDb__AccountKey='<key>' \
+  -e ConnectionStrings__Redis='<host>:6380,password=<key>,ssl=true' \
+  -e Google__CalendarId='<calendar-id>' \
+  -e Google__ApiKey='<api-key>' \
+  fostercentralcommand-api:local
 ```
+
+The image runs as the non-root `app` user provided by the `mcr.microsoft.com/dotnet/aspnet:10.0` base image and is suitable for hosting in Azure Container Apps, ACI, AKS, or any other container runtime.
 
 ## PWA Install
 

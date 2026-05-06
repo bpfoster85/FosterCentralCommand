@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Button } from 'primereact/button'
 import { InputNumber } from 'primereact/inputnumber'
-import { Dropdown } from 'primereact/dropdown'
+import { InputText } from 'primereact/inputtext'
+import { InputTextarea } from 'primereact/inputtextarea'
 import { ProgressBar } from 'primereact/progressbar'
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog'
 import { Toast } from 'primereact/toast'
@@ -9,6 +10,7 @@ import { useRef } from 'react'
 import { useProfiles } from '../hooks/useProfiles'
 import { useChores } from '../hooks/useChores'
 import ChoreEditorDialog from '../components/chores/ChoreEditorDialog'
+import { getMyFamily, updateFamily, type FamilyDto } from '../api/families'
 import type { Chore, Profile } from '../types'
 
 interface PendingItem {
@@ -40,6 +42,29 @@ const AdminPage: React.FC = () => {
   // Award-stars panel state
   const [awardProfileId, setAwardProfileId] = useState<string | null>(null)
   const [awardAmount, setAwardAmount] = useState<number>(1)
+
+  // Family settings panel state
+  const [family, setFamily] = useState<FamilyDto | null>(null)
+  const [calendarId, setCalendarId] = useState('')
+  const [apiKey, setApiKey] = useState('')
+  const [serviceAccount, setServiceAccount] = useState('')
+  const [savingFamily, setSavingFamily] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    getMyFamily()
+      .then(f => {
+        if (cancelled || !f) return
+        setFamily(f)
+        setCalendarId(f.googleCalendarId ?? '')
+      })
+      .catch(() => {
+        /* surfaced elsewhere via 401 handler */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // Chore editor dialog state
   const [editorOpen, setEditorOpen] = useState(false)
@@ -115,6 +140,54 @@ const AdminPage: React.FC = () => {
     setAwardAmount(1)
   }
 
+  const handleSaveFamily = async (
+    patch: { calendarId?: string; apiKey?: string; serviceAccount?: string }
+  ) => {
+    if (!family) return 
+    setSavingFamily(true)
+    try {
+      const body: Record<string, string | null> = {}
+      if (patch.calendarId !== undefined) body.googleCalendarId = patch.calendarId
+      if (patch.apiKey !== undefined) body.googleApiKey = patch.apiKey
+      if (patch.serviceAccount !== undefined) body.googleServiceAccountJson = patch.serviceAccount
+
+      const updated = await updateFamily(family.id, body)
+      setFamily(updated)
+      setCalendarId(updated.googleCalendarId ?? '')
+      // Clear secret inputs after a successful save so we don't keep them in memory.
+      if (patch.apiKey !== undefined) setApiKey('')
+      if (patch.serviceAccount !== undefined) setServiceAccount('')
+
+      toast.current?.show({
+        severity: 'success',
+        summary: 'Family updated',
+        life: 2500,
+      })
+    } catch (err) {
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Update failed',
+        detail: err instanceof Error ? err.message : 'See console for details.',
+        life: 4000,
+      })
+    } finally {
+      setSavingFamily(false)
+    }
+  }
+
+  const validateServiceAccountJson = (raw: string): string | null => {
+    if (!raw.trim()) return null
+    try {
+      const parsed = JSON.parse(raw)
+      if (parsed?.type !== 'service_account' || !parsed?.client_email) {
+        return 'JSON does not look like a service account key (missing type/client_email).'
+      }
+      return null
+    } catch {
+      return 'Not valid JSON.'
+    }
+  }
+
   const openCreateChore = () => {
     setEditingChore(null)
     setEditorOpen(true)
@@ -139,8 +212,6 @@ const AdminPage: React.FC = () => {
         reject: () => resolve(),
       })
     })
-
-  const profileOptions = profiles.map(p => ({ label: p.name, value: p.id }))
 
   return (
     <div style={{ flex: 1, overflow: 'auto', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -265,13 +336,64 @@ const AdminPage: React.FC = () => {
             <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 500, fontSize: '0.85rem' }}>
               Profile
             </label>
-            <Dropdown
-              value={awardProfileId}
-              options={profileOptions}
-              onChange={e => setAwardProfileId(e.value)}
-              placeholder="Pick a profile"
-              className="w-full"
-            />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+              {profiles.length === 0 ? (
+                <span style={{ fontSize: '0.85rem', color: 'var(--sky-text-secondary)' }}>
+                  No profiles available
+                </span>
+              ) : (
+                profiles.map(p => {
+                  const selected = awardProfileId === p.id
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setAwardProfileId(selected ? null : p.id)}
+                      aria-pressed={selected}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        padding: '0.4rem 0.85rem',
+                        borderRadius: '999px',
+                        border: `2px solid ${selected ? p.color : 'transparent'}`,
+                        background: selected
+                          ? p.color
+                          : 'var(--sky-surface-soft, rgba(160, 200, 220, 0.08))',
+                        color: selected ? '#fff' : 'var(--sky-text-primary)',
+                        fontWeight: 600,
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          background: selected ? '#fff' : p.color,
+                          flexShrink: 0,
+                        }}
+                      />
+                      {p.name}
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.2rem',
+                          color: selected ? '#fff' : 'var(--sky-amber)',
+                          fontWeight: 700,
+                        }}
+                      >
+                        <i className="pi pi-star-fill" style={{ fontSize: '0.7rem' }} />
+                        {p.totalStars ?? 0}
+                      </span>
+                    </button>
+                  )
+                })
+              )}
+            </div>
           </div>
           <div style={{ width: '240px' }}>
             <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 500, fontSize: '0.85rem' }}>
@@ -295,38 +417,184 @@ const AdminPage: React.FC = () => {
             onClick={handleAward}
           />
         </div>
+      </section>
 
-        {profiles.length > 0 && (
-          <div style={{ marginTop: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            {profiles.map(p => (
-              <div
-                key={p.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  padding: '0.35rem 0.7rem',
-                  borderRadius: '999px',
-                  background: 'var(--sky-surface-soft, rgba(160, 200, 220, 0.08))',
-                  borderLeft: `3px solid ${p.color}`,
-                }}
-              >
-                <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{p.name}</span>
+      {/* === Family / Google settings === */}
+      <section className="sky-card" style={{ padding: '1.25rem' }}>
+        <header style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+          <i className="pi pi-cog" style={{ color: 'var(--sky-amber)' }} />
+          <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600, flex: 1 }}>
+            Family &amp; Google Settings
+          </h3>
+          {family && (
+            <span style={{ fontSize: '0.8rem', color: 'var(--sky-text-secondary)' }}>
+              {family.name}
+            </span>
+          )}
+        </header>
+
+        {!family ? (
+          <span style={{ fontSize: '0.85rem', color: 'var(--sky-text-secondary)' }}>
+            Loading…
+          </span>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* Calendar ID */}
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 500, fontSize: '0.85rem' }}>
+                Google Calendar ID
+              </label>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <InputText
+                  value={calendarId}
+                  onChange={e => setCalendarId(e.target.value)}
+                  placeholder="example@group.calendar.google.com"
+                  className="w-full"
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  label="Save"
+                  icon="pi pi-save"
+                  className="p-button-sm"
+                  loading={savingFamily}
+                  disabled={calendarId === (family.googleCalendarId ?? '')}
+                  onClick={() => handleSaveFamily({ calendarId })}
+                />
+              </div>
+            </div>
+
+            {/* API Key */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                <label style={{ fontWeight: 500, fontSize: '0.85rem' }}>
+                  Google API Key
+                </label>
                 <span
                   style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.2rem',
-                    color: 'var(--sky-amber)',
+                    fontSize: '0.7rem',
                     fontWeight: 700,
-                    fontSize: '0.85rem',
+                    padding: '0.1rem 0.5rem',
+                    borderRadius: '999px',
+                    background: family.hasGoogleApiKey
+                      ? 'var(--sky-amber)'
+                      : 'var(--surface-200, rgba(0,0,0,0.08))',
+                    color: family.hasGoogleApiKey ? '#fff' : 'var(--sky-text-secondary)',
                   }}
                 >
-                  <i className="pi pi-star-fill" style={{ fontSize: '0.7rem' }} />
-                  {p.totalStars ?? 0}
+                  {family.hasGoogleApiKey ? 'Configured' : 'Not set'}
                 </span>
               </div>
-            ))}
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <InputText
+                  value={apiKey}
+                  onChange={e => setApiKey(e.target.value)}
+                  placeholder={family.hasGoogleApiKey ? '••••••••  (enter new key to replace)' : 'Paste API key'}
+                  type="password"
+                  className="w-full"
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  label="Save"
+                  icon="pi pi-save"
+                  className="p-button-sm"
+                  loading={savingFamily}
+                  disabled={apiKey.length === 0}
+                  onClick={() => handleSaveFamily({ apiKey })}
+                />
+                {family.hasGoogleApiKey && (
+                  <Button
+                    label="Clear"
+                    icon="pi pi-times"
+                    className="p-button-sm p-button-text p-button-danger"
+                    loading={savingFamily}
+                    onClick={() =>
+                      confirmDialog({
+                        message: 'Clear the saved Google API key?',
+                        header: 'Clear API key',
+                        icon: 'pi pi-exclamation-triangle',
+                        acceptClassName: 'p-button-danger',
+                        accept: () => handleSaveFamily({ apiKey: '' }),
+                      })
+                    }
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Service account JSON */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                <label style={{ fontWeight: 500, fontSize: '0.85rem' }}>
+                  Google Service Account JSON
+                </label>
+                <span
+                  style={{
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    padding: '0.1rem 0.5rem',
+                    borderRadius: '999px',
+                    background: family.hasGoogleServiceAccount
+                      ? 'var(--sky-amber)'
+                      : 'var(--surface-200, rgba(0,0,0,0.08))',
+                    color: family.hasGoogleServiceAccount ? '#fff' : 'var(--sky-text-secondary)',
+                  }}
+                >
+                  {family.hasGoogleServiceAccount ? 'Configured' : 'Not set'}
+                </span>
+              </div>
+              <p style={{ margin: '0 0 0.4rem', fontSize: '0.78rem', color: 'var(--sky-text-secondary)' }}>
+                Required for write access. Paste the full key JSON. Service account email must
+                be shared with the calendar above.
+              </p>
+              <InputTextarea
+                value={serviceAccount}
+                onChange={e => setServiceAccount(e.target.value)}
+                placeholder={
+                  family.hasGoogleServiceAccount
+                    ? 'A service account is configured. Paste replacement JSON to overwrite.'
+                    : '{ "type": "service_account", "project_id": "...", ... }'
+                }
+                rows={6}
+                className="w-full"
+                style={{ fontFamily: 'monospace', fontSize: '0.78rem' }}
+              />
+              {serviceAccount.trim().length > 0 && validateServiceAccountJson(serviceAccount) && (
+                <span style={{ fontSize: '0.78rem', color: 'var(--sky-coral, #d04848)' }}>
+                  {validateServiceAccountJson(serviceAccount)}
+                </span>
+              )}
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <Button
+                  label="Save"
+                  icon="pi pi-save"
+                  className="p-button-sm"
+                  loading={savingFamily}
+                  disabled={
+                    serviceAccount.trim().length === 0 ||
+                    validateServiceAccountJson(serviceAccount) !== null
+                  }
+                  onClick={() => handleSaveFamily({ serviceAccount })}
+                />
+                {family.hasGoogleServiceAccount && (
+                  <Button
+                    label="Clear"
+                    icon="pi pi-times"
+                    className="p-button-sm p-button-text p-button-danger"
+                    loading={savingFamily}
+                    onClick={() =>
+                      confirmDialog({
+                        message:
+                          'Clear the saved service account JSON? Calendar sync will fall back to API key (read-only) if one is configured.',
+                        header: 'Clear service account',
+                        icon: 'pi pi-exclamation-triangle',
+                        acceptClassName: 'p-button-danger',
+                        accept: () => handleSaveFamily({ serviceAccount: '' }),
+                      })
+                    }
+                  />
+                )}
+              </div>
+            </div>
           </div>
         )}
       </section>

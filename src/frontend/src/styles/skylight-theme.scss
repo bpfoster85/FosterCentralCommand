@@ -523,6 +523,11 @@ textarea.p-inputtext,
     color: white !important;
   }
 
+  .fc-today-button,
+  .fc-today-button:disabled {
+    color: #fff !important;
+  }
+
   .fc-col-header-cell {
     background: $sky-surface-soft;
     font-weight: 600;
@@ -1042,6 +1047,11 @@ textarea.p-inputtext,
   display: flex;
   align-items: center;
   gap: 0.25rem;
+
+  .p-button.p-button-secondary,
+  .p-button.p-button-secondary .p-button-label {
+    color: #fff;
+  }
 }
 
 .sky-control-tile-add {

@@ -53,6 +53,8 @@ const AppShell: React.FC = () => {
 
   const isActive = (path: string) => location.pathname.startsWith(path)
 
+  const visibleNavItems = navItems.filter(item => item.path !== '/admin' || isAdmin)
+
   const handleLogout = () => {
     clearAdminKey()
     clearFamilySession()
@@ -67,7 +69,7 @@ const AppShell: React.FC = () => {
           <span className="sky-nav-clock-time">{time.replace(' ', '')}</span>
           <span className="sky-nav-clock-zone">MST</span>
         </div>
-        {navItems.map(item => (
+        {visibleNavItems.map(item => (
           <button
             key={item.path}
             className={`sky-nav-tab ${isActive(item.path) ? 'active' : ''}`}

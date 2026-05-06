@@ -1,0 +1,39 @@
+# Source control & editor
+**/.git
+**/.gitignore
+**/.gitattributes
+**/.vscode
+**/.vs
+**/.idea
+
+# Build output
+**/bin
+**/obj
+**/dist
+**/dist-ssr
+**/.vite
+**/TestResults
+**/coverage
+
+# Node
+**/node_modules
+**/npm-debug.log*
+
+# Not needed in the API image
+src/frontend
+src/tests
+
+# Secrets / local config
+**/.env
+**/.env.*
+**/*.secrets.json
+**/appsettings.*.Local.json
+**/google-service-account.json
+**/google-credentials.json
+**/*-service-account.json
+
+# Misc
+**/*.md
+.body.json
+Dockerfile
+.dockerignore
