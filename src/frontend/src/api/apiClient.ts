@@ -42,8 +42,14 @@ export const clearAdminKey = (): void => {
   localStorage.removeItem(ADMIN_KEY_STORAGE_KEY)
 }
 
+// VITE_API_URL is the API origin (e.g. https://aca-familycalendar.<env>.<region>.azurecontainerapps.io).
+// In local dev it's typically unset and the Vite proxy / same-origin handles `/api`.
+const apiBaseUrl = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL.toString().replace(/\/$/, '')}/api`
+  : '/api'
+
 const apiClient = axios.create({
-  baseURL: '/api',
+  baseURL: apiBaseUrl,
   headers: {
     'Content-Type': 'application/json'
   }
