@@ -19,7 +19,7 @@ on:
       apiUrl:
         description: "VITE_API_URL the frontend should call (e.g. https://aca-familycalendar.<env>.<region>.azurecontainerapps.io)"
         required: false
-        default: ""
+        default: "https://witty-field-0c8956b1e.7.azurestaticapps.net"
 
 permissions:
   contents: read
