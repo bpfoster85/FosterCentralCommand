@@ -1,0 +1,63 @@
+# Manually-triggered build & deploy of the FosterCentralCommand frontend (Vite/React) to
+# the existing Azure Static Web App `swa-familycalendar`.
+#
+# Required GitHub repository secret:
+#   AZURE_STATIC_WEB_APPS_API_TOKEN
+#     - Azure portal -> swa-familycalendar -> Overview -> "Manage deployment token" -> copy.
+#     - Add as a repo secret with this exact name.
+#
+# The frontend talks to the API via VITE_API_URL, baked in at build time. Because the
+# Container App currently has `internal` ingress, this workflow defaults the URL to a
+# placeholder — update the workflow input (or the default below) once the API is reachable
+# externally.
+
+name: Deploy Frontend (SWA)
+
+on:
+  workflow_dispatch:
+    inputs:
+      apiUrl:
+        description: "VITE_API_URL the frontend should call (e.g. https://aca-familycalendar.<env>.<region>.azurecontainerapps.io)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-deploy:
+    name: Build and deploy SWA
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: src/frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build
+        env:
+          VITE_API_URL: ${{ inputs.apiUrl }}
+        run: npm run build
+
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          # SWA action runs from the repo root, so paths are repo-relative here.
+          app_location: src/frontend
+          output_location: dist
+          skip_app_build: true
