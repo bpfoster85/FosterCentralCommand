@@ -6,7 +6,7 @@ import {
   useState,
 } from 'react'
 import type { ReactNode } from 'react'
-import KeyboardReact from 'react-simple-keyboard'
+import { KeyboardReact } from 'react-simple-keyboard'
 import 'react-simple-keyboard/build/css/index.css'
 import { useNeedsVirtualKeyboard } from '../../hooks/useNeedsVirtualKeyboard'
 import './VirtualKeyboard.scss'
