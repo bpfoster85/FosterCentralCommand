@@ -1,15 +1,12 @@
 # Manually-triggered build & deploy of the FosterCentralCommand frontend (Vite/React) to
 # the existing Azure Static Web App `swa-familycalendar`.
 #
-# Required GitHub repository secret:
-#   AZURE_STATIC_WEB_APPS_API_TOKEN
-#     - Azure portal -> swa-familycalendar -> Overview -> "Manage deployment token" -> copy.
-#     - Add as a repo secret with this exact name.
+# Required GitHub repository secrets:
+#   AZURE_STATIC_WEB_APPS_API_TOKEN  - SWA deployment token.
+#   AZURE_CREDENTIALS                - Service-principal JSON used to look up the API FQDN.
 #
-# The frontend talks to the API via VITE_API_URL, baked in at build time. Because the
-# Container App currently has `internal` ingress, this workflow defaults the URL to a
-# placeholder — update the workflow input (or the default below) once the API is reachable
-# externally.
+# The API URL is auto-resolved from the `aca-familycalendar` Container App's ingress FQDN
+# so the frontend always points at the live API. You can override it via the apiUrl input.
 
 name: Deploy Frontend (SWA)
 
@@ -17,24 +14,54 @@ on:
   workflow_dispatch:
     inputs:
       apiUrl:
-        description: "VITE_API_URL the frontend should call (e.g. https://aca-familycalendar.<env>.<region>.azurecontainerapps.io)"
+        description: "Override VITE_API_URL (leave blank to auto-resolve from Container App)"
         required: false
-        default: "https://witty-field-0c8956b1e.7.azurestaticapps.net"
+        default: ""
 
 permissions:
   contents: read
+
+env:
+  AZURE_RESOURCE_GROUP: rg-fostercentralcommand
+  CONTAINER_APP_NAME: aca-familycalendar
 
 jobs:
   build-and-deploy:
     name: Build and deploy SWA
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: src/frontend
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Resolve API URL
+        id: api
+        shell: bash
+        env:
+          OVERRIDE_URL: ${{ inputs.apiUrl }}
+        run: |
+          set -euo pipefail
+          if [ -n "$OVERRIDE_URL" ]; then
+            url="$OVERRIDE_URL"
+          else
+            az extension add --name containerapp --upgrade --only-show-errors >/dev/null
+            fqdn=$(az containerapp show \
+              --name "$CONTAINER_APP_NAME" \
+              --resource-group "$AZURE_RESOURCE_GROUP" \
+              --query properties.configuration.ingress.fqdn -o tsv)
+            if [ -z "$fqdn" ]; then
+              echo "::error::Could not resolve Container App FQDN."
+              exit 1
+            fi
+            url="https://${fqdn}"
+          fi
+          echo "::notice::Using VITE_API_URL=$url"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -44,11 +71,13 @@ jobs:
           cache-dependency-path: src/frontend/package-lock.json
 
       - name: Install dependencies
+        working-directory: src/frontend
         run: npm ci --legacy-peer-deps
 
       - name: Build
+        working-directory: src/frontend
         env:
-          VITE_API_URL: ${{ inputs.apiUrl }}
+          VITE_API_URL: ${{ steps.api.outputs.url }}
         run: npm run build
 
       - name: Deploy to Azure Static Web Apps
@@ -58,7 +87,6 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: upload
           # With skip_app_build:true, app_location must point directly at the
-          # already-built static output. output_location is ignored in this mode,
-          # so omitting it prevents the action from uploading node_modules.
+          # already-built static output.
           app_location: src/frontend/dist
           skip_app_build: true

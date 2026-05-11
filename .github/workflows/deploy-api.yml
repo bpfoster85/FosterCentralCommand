@@ -24,7 +24,7 @@ on:
       allowedOrigins:
         description: "Comma-separated CORS origins for the API (e.g. https://app.example.com,https://www.example.com)"
         required: false
-        default: "https://witty-field-0c8956b1e.7.azurestaticapps.net"
+        default: "https://fosterclan.net,https://www.fosterclan.net,https://witty-field-0c8956b1e.7.azurestaticapps.net"
 
 permissions:
   contents: read
