@@ -18,17 +18,23 @@ builder.Services
     });
 builder.Services.AddEndpointsApiExplorer();
 
-// CORS for React dev server
+// CORS — origins come from configuration ("Cors:AllowedOrigins" array or
+// "Cors__AllowedOrigins__0" env vars). Falls back to local dev origins.
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>();
+
+if (allowedOrigins is null || allowedOrigins.Length == 0)
+{
+    allowedOrigins = new[] { "http://localhost:5173", "http://localhost:3000", "https://www.fosterclan.net" };
+}
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
         policy
-            .WithOrigins(
-                "http://localhost:5173",
-                "http://localhost:3000",
-                "https://fosterclan.net",
-                "https://www.fosterclan.net")
+            .WithOrigins(allowedOrigins)
             .SetIsOriginAllowedToAllowWildcardSubdomains()
             .AllowAnyHeader()
             .AllowAnyMethod()

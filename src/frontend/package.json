@@ -31,7 +31,11 @@
     "react-grid-layout": "^2.2.3",
     "react-resizable": "^3.1.3",
     "react-router-dom": "^7.14.2",
+<<<<<<< HEAD
     "react-simple-keyboard": "^3.8.202",
+=======
+    "react-simple-keyboard": "^3.8.203",
+>>>>>>> 44135cfe3682ec83c2d2b2e150eb20e1375d2d10
     "vite-plugin-pwa": "latest",
     "workbox-window": "^7.4.0"
   },
