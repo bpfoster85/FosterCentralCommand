@@ -26,7 +26,7 @@ var allowedOrigins = builder.Configuration
 
 if (allowedOrigins is null || allowedOrigins.Length == 0)
 {
-    allowedOrigins = ["http://localhost:5173", "http://localhost:3000"];
+    allowedOrigins = ["http://localhost:5173", "http://localhost:3000","https://www.fosterclan.net"];
 }
 
 builder.Services.AddCors(options =>
