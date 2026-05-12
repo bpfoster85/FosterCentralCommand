@@ -6,17 +6,12 @@
 #   AZURE_CREDENTIALS                - Service-principal JSON used to look up the API FQDN.
 #
 # The API URL is auto-resolved from the `aca-familycalendar` Container App's ingress FQDN
-# so the frontend always points at the live API. You can override it via the apiUrl input.
+# so the frontend always points at the live API.
 
 name: Deploy Frontend (SWA)
 
 on:
   workflow_dispatch:
-    inputs:
-      apiUrl:
-        description: "Override VITE_API_URL (leave blank to auto-resolve from Container App)"
-        required: false
-        default: ""
 
 permissions:
   contents: read
@@ -39,27 +34,21 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Resolve API URL
+      - name: Resolve API URL from Container App
         id: api
         shell: bash
-        env:
-          OVERRIDE_URL: ${{ inputs.apiUrl }}
         run: |
           set -euo pipefail
-          if [ -n "$OVERRIDE_URL" ]; then
-            url="$OVERRIDE_URL"
-          else
-            az extension add --name containerapp --upgrade --only-show-errors >/dev/null
-            fqdn=$(az containerapp show \
-              --name "$CONTAINER_APP_NAME" \
-              --resource-group "$AZURE_RESOURCE_GROUP" \
-              --query properties.configuration.ingress.fqdn -o tsv)
-            if [ -z "$fqdn" ]; then
-              echo "::error::Could not resolve Container App FQDN."
-              exit 1
-            fi
-            url="https://${fqdn}"
+          az extension add --name containerapp --upgrade --only-show-errors >/dev/null
+          fqdn=$(az containerapp show \
+            --name "$CONTAINER_APP_NAME" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --query properties.configuration.ingress.fqdn -o tsv)
+          if [ -z "$fqdn" ]; then
+            echo "::error::Could not resolve Container App FQDN."
+            exit 1
           fi
+          url="https://${fqdn}"
           echo "::notice::Using VITE_API_URL=$url"
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
