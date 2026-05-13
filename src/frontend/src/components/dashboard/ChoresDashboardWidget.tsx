@@ -4,6 +4,7 @@ import { useChores } from '../../hooks/useChores'
 import ChoresDayView from '../chores/ChoresDayView'
 import type { Chore, Profile } from '../../types'
 import { toDateKey } from '../../utils/choreSchedule'
+import { sortProfilesForChores } from '../../utils/profileOrder'
 
 interface ChoresDashboardWidgetProps {
   profiles: Profile[]
@@ -17,6 +18,8 @@ const TODAY_FORMAT: Intl.DateTimeFormatOptions = {
 
 const ChoresDashboardWidget: React.FC<ChoresDashboardWidgetProps> = ({ profiles }) => {
   const { chores, loading, toggleCompleteOnDate } = useChores()
+
+  const orderedProfiles = useMemo(() => sortProfilesForChores(profiles), [profiles])
 
   const today = useMemo(() => {
     const d = new Date()
@@ -47,7 +50,7 @@ const ChoresDashboardWidget: React.FC<ChoresDashboardWidgetProps> = ({ profiles 
           <ChoresDayView
             date={today}
             chores={chores}
-            profiles={profiles}
+            profiles={orderedProfiles}
             onToggleComplete={handleToggle}
           />
         )}

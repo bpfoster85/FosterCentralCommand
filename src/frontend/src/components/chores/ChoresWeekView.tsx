@@ -11,6 +11,7 @@ import {
   isSameDay,
   toDateKey,
 } from '../../utils/choreSchedule'
+import { sortProfilesForChores } from '../../utils/profileOrder'
 
 interface ChoresWeekViewProps {
   weekStart: Date
@@ -200,8 +201,8 @@ const ChoresWeekView: React.FC<ChoresWeekViewProps> = ({ weekStart, chores, prof
   }
 
   // groupBy === 'profile' — one row per profile, 7 columns per row
-  const profilesWithChores = profiles.filter(p =>
-    chores.some(c => c.assignedProfileId === p.id)
+  const profilesWithChores = sortProfilesForChores(
+    profiles.filter(p => chores.some(c => c.assignedProfileId === p.id))
   )
 
   return (

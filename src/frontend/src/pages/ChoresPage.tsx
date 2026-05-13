@@ -8,6 +8,7 @@ import ChoresDayView from '../components/chores/ChoresDayView'
 import MobileProfilePicker from '../components/profiles/MobileProfilePicker'
 import type { Chore, Profile } from '../types'
 import { addDays, toDateKey } from '../utils/choreSchedule'
+import { sortProfilesForChores } from '../utils/profileOrder'
 
 const DAY_LABEL_FORMAT: Intl.DateTimeFormatOptions = {
   weekday: 'long',
@@ -28,8 +29,10 @@ const isSameDay = (a: Date, b: Date): boolean =>
   a.getDate() === b.getDate()
 
 const ChoresPage: React.FC = () => {
-  const { profiles, loading: profilesLoading, refetch: refetchProfiles } = useProfiles()
+  const { profiles: rawProfiles, loading: profilesLoading, refetch: refetchProfiles } = useProfiles()
   const { chores, loading: choresLoading, toggleCompleteOnDate } = useChores()
+
+  const profiles = React.useMemo(() => sortProfilesForChores(rawProfiles), [rawProfiles])
 
   const [day, setDay] = useState<Date>(() => startOfDay(new Date()))
   const [profileFilter, setProfileFilter] = useState<string | null>(null) // null = all
