@@ -13,6 +13,7 @@ import { useLists, useListItems } from '../hooks/useLists'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 import ChoreEditorDialog from '../components/chores/ChoreEditorDialog'
 import MobileProfilePicker from '../components/profiles/MobileProfilePicker'
+import SwipeApprovalRow from '../components/admin/SwipeApprovalRow'
 import { getMyFamily, updateFamily, type FamilyDto } from '../api/families'
 import type { Chore, Profile } from '../types'
 
@@ -154,22 +155,14 @@ const AdminPage: React.FC = () => {
     })
   }
 
-  const handleReject = (item: PendingItem) => {
-    confirmDialog({
-      message: `Reject "${item.chore.title}" for ${formatDateKey(item.dateKey)}? This will uncheck the completion for the assignee.`,
-      header: 'Reject completion',
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Reject',
-      acceptClassName: 'p-button-danger',
-      accept: async () => {
-        // Rejecting = toggle the user-side completion off. Since it is not yet approved,
-        // no stars are involved; the entry is simply removed from completedDates.
-        const apiClient = (await import('../api/chores')).toggleChoreCompleteOnDate
-        await apiClient(item.chore.id, item.dateKey)
-        await refetchChores()
-        toast.current?.show({ severity: 'info', summary: 'Rejected', life: 2000 })
-      },
-    })
+  const handleReject = async (item: PendingItem) => {
+    // Rejecting = toggle the user-side completion off. Since it is not yet
+    // approved, no stars are involved; the entry is simply removed from
+    // completedDates. The swipe gesture itself is the confirmation.
+    const toggleChoreCompleteOnDate = (await import('../api/chores')).toggleChoreCompleteOnDate
+    await toggleChoreCompleteOnDate(item.chore.id, item.dateKey)
+    await refetchChores()
+    toast.current?.show({ severity: 'info', summary: 'Rejected', life: 2000 })
   }
 
   const handleAward = async () => {
@@ -360,71 +353,79 @@ const AdminPage: React.FC = () => {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {pending.map(item => (
-              <div
+              <SwipeApprovalRow
                 key={`${item.chore.id}_${item.dateKey}`}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  padding: '0.75rem 0.9rem',
-                  borderLeft: `4px solid ${item.profile?.color ?? 'var(--sky-amber)'}`,
-                  background: 'var(--sky-surface-soft, rgba(160, 200, 220, 0.08))',
-                  borderRadius: 'var(--sky-radius-md, 12px)',
-                }}
+                onApprove={() => handleApprove(item)}
+                onReject={() => handleReject(item)}
               >
                 <div
                   style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    background: item.profile?.color ?? '#888',
-                    color: '#fff',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 700,
-                    flexShrink: 0,
+                    flexDirection: 'column',
+                    gap: '0.5rem',
+                    padding: '0.85rem 1rem',
+                    borderLeft: `4px solid ${item.profile?.color ?? 'var(--sky-amber)'}`,
+                    background: 'var(--sky-surface-soft, rgba(160, 200, 220, 0.08))',
+                    borderRadius: 'var(--sky-radius-md, 12px)',
                   }}
                 >
-                  {item.profile?.name.charAt(0).toUpperCase() ?? '?'}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600 }}>{item.chore.title}</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--sky-text-secondary)' }}>
-                    {item.profile?.name ?? 'Unassigned'} · {formatDateKey(item.dateKey)}
+                  {/* Title row: chore title + star value */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <div
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        background: item.profile?.color ?? '#888',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 700,
+                        flexShrink: 0,
+                      }}
+                      aria-label={item.profile?.name ?? 'Unassigned'}
+                    >
+                      {item.profile?.name.charAt(0).toUpperCase() ?? '?'}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0, fontWeight: 700, fontSize: '1.05rem' }}>
+                      {item.chore.title}
+                    </div>
+                    <div
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        padding: '0.25rem 0.6rem',
+                        borderRadius: '999px',
+                        background: 'rgba(232, 185, 116, 0.18)',
+                        color: 'var(--sky-amber)',
+                        fontWeight: 700,
+                        fontSize: '0.85rem',
+                      }}
+                    >
+                      <i className="pi pi-star-fill" style={{ fontSize: '0.75rem' }} />
+                      <span>{item.chore.starValue}</span>
+                    </div>
+                  </div>
+
+                  {/* Day row: spans full width */}
+                  <div
+                    style={{
+                      width: '100%',
+                      textAlign: 'center',
+                      padding: '0.35rem 0.5rem',
+                      borderRadius: '8px',
+                      background: 'rgba(0, 0, 0, 0.04)',
+                      color: 'var(--sky-text-secondary)',
+                      fontSize: '0.85rem',
+                      fontWeight: 500,
+                    }}
+                  >
+                    {formatDateKey(item.dateKey)}
                   </div>
                 </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    padding: '0.25rem 0.6rem',
-                    borderRadius: '999px',
-                    background: 'rgba(232, 185, 116, 0.18)',
-                    color: 'var(--sky-amber)',
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                  }}
-                >
-                  <i className="pi pi-star-fill" style={{ fontSize: '0.75rem' }} />
-                  <span>{item.chore.starValue}</span>
-                </div>
-                <Button
-                  label="Approve"
-                  icon="pi pi-check"
-                  className="p-button-sm"
-                  onClick={() => handleApprove(item)}
-                />
-                <Button
-                  icon="pi pi-times"
-                  className="p-button-sm p-button-text p-button-danger"
-                  onClick={() => handleReject(item)}
-                  aria-label="Reject"
-                  tooltip="Reject (uncheck completion)"
-                  tooltipOptions={{ position: 'top' }}
-                />
-              </div>
+              </SwipeApprovalRow>
             ))}
           </div>
         )}
