@@ -51,8 +51,8 @@ const GroceryWidget: React.FC<GroceryWidgetProps> = ({ profiles }) => {
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div className="sky-widget-header">
-        <span style={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-          <i className="pi pi-shopping-cart" />
+        <span style={{ fontWeight: 600, fontSize: '1.25rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+          <i className="pi pi-shopping-cart" style={{ fontSize: '1.25rem' }} />
           Grocery
         </span>
       </div>
@@ -65,13 +65,12 @@ const GroceryWidget: React.FC<GroceryWidgetProps> = ({ profiles }) => {
           <ProgressBar mode="indeterminate" style={{ height: '4px' }} />
         ) : !groceryList ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1rem 0', textAlign: 'center' }}>
-            <span style={{ color: 'var(--sky-text-secondary)', fontSize: '0.9rem' }}>
+            <span style={{ color: 'var(--sky-text-secondary)', fontSize: '1.05rem' }}>
               No "Grocery" list yet.
             </span>
             <Button
               label="Create Grocery list"
               icon="pi pi-plus"
-              className="p-button-sm"
               onClick={handleCreateGroceryList}
               disabled={creating}
             />
@@ -85,11 +84,12 @@ const GroceryWidget: React.FC<GroceryWidgetProps> = ({ profiles }) => {
                 onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
                 placeholder="Add an item..."
                 className="w-full"
+                style={{ fontSize: '1.05rem', padding: '0.6rem 0.75rem' }}
               />
               <Button
                 label="Add"
                 icon="pi pi-plus"
-                className="p-button-sm w-full"
+                className="w-full"
                 onClick={handleAdd}
                 disabled={!quickAdd.trim()}
               />
@@ -99,7 +99,7 @@ const GroceryWidget: React.FC<GroceryWidgetProps> = ({ profiles }) => {
               {itemsLoading ? (
                 <ProgressBar mode="indeterminate" style={{ height: '4px' }} />
               ) : items.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--sky-text-secondary)', fontSize: '0.85rem' }}>
+                <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--sky-text-secondary)', fontSize: '1.05rem' }}>
                   Nothing on the list yet.
                 </div>
               ) : (
@@ -109,13 +109,13 @@ const GroceryWidget: React.FC<GroceryWidgetProps> = ({ profiles }) => {
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '0.6rem',
-                        padding: '0.45rem 0.25rem',
+                        gap: '0.7rem',
+                        padding: '0.6rem 0.25rem',
                         borderBottom: '1px solid var(--surface-border)',
                       }}
                     >
                       <Checkbox checked={false} onChange={() => deleteItem(item.id)} />
-                      <span style={{ flex: 1, fontSize: '0.9rem' }}>
+                      <span style={{ flex: 1, fontSize: '1.15rem', lineHeight: 1.35, fontWeight: 600 }}>
                         {item.title}
                       </span>
                     </div>

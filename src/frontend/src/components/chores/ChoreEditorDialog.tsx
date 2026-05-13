@@ -235,6 +235,7 @@ const ChoreEditorDialog: React.FC<ChoreEditorDialogProps> = ({
       visible={visible}
       onHide={onClose}
       style={{ width: '92vw', maxWidth: '820px' }}
+      dismissableMask
       footer={
         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'space-between' }}>
           <div>

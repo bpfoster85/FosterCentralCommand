@@ -88,6 +88,7 @@ const ProfilesPage: React.FC = () => {
         visible={dialogVisible}
         onHide={() => setDialogVisible(false)}
         style={{ width: '90vw', maxWidth: '400px' }}
+        dismissableMask
         footer={
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
             <Button label="Cancel" className="p-button-text" onClick={() => setDialogVisible(false)} />

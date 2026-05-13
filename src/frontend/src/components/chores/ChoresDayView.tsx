@@ -1,5 +1,6 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Checkbox } from 'primereact/checkbox'
+import { Dialog } from 'primereact/dialog'
 import type { Chore, Profile } from '../../types'
 import {
   choreOccursOn,
@@ -35,9 +36,10 @@ interface ProfileColumnProps {
   date: Date
   chores: Chore[]
   onToggleComplete: (chore: Chore, date: Date) => void
+  onChoreClick: (chore: Chore) => void
 }
 
-const ProfileColumn: React.FC<ProfileColumnProps> = ({ profile, date, chores, onToggleComplete }) => {
+const ProfileColumn: React.FC<ProfileColumnProps> = ({ profile, date, chores, onToggleComplete, onChoreClick }) => {
   const occurrences = chores
     .filter(c => c.assignedProfileId === profile.id && choreOccursOn(c, date))
 
@@ -78,11 +80,13 @@ const ProfileColumn: React.FC<ProfileColumnProps> = ({ profile, date, chores, on
         >
           {profile.name.charAt(0).toUpperCase()}
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           <div
             style={{
+              flex: 1,
+              minWidth: 0,
               fontWeight: 700,
-              fontSize: '1.05rem',
+              fontSize: '1.15rem',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -94,20 +98,21 @@ const ProfileColumn: React.FC<ProfileColumnProps> = ({ profile, date, chores, on
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.4rem',
-              marginTop: '0.2rem',
-              padding: '0.15rem 0.6rem',
+              gap: '0.35rem',
+              padding: '0.25rem 0.7rem',
               borderRadius: '999px',
               background: 'rgba(255,255,255,0.7)',
-              fontSize: '0.75rem',
-              fontWeight: 600,
+              fontSize: '0.95rem',
+              fontWeight: 700,
               color: 'var(--sky-text-secondary)',
+              flexShrink: 0,
             }}
+            title={`${done} of ${total} complete`}
           >
-            <i className="pi pi-check" style={{ fontSize: '0.7rem' }} />
+            <i className="pi pi-check" style={{ fontSize: '0.9rem' }} />
             <span>{done}/{total}</span>
-            <span style={{ margin: '0 0.1rem', opacity: 0.5 }}>·</span>
-            <i className="pi pi-star-fill" style={{ color: 'var(--sky-amber)', fontSize: '0.7rem' }} />
+            <span style={{ margin: '0 0.15rem', opacity: 0.5 }}>·</span>
+            <i className="pi pi-star-fill" style={{ color: 'var(--sky-amber)', fontSize: '1rem' }} />
             <span>{profile.totalStars ?? 0}</span>
           </div>
         </div>
@@ -121,7 +126,7 @@ const ProfileColumn: React.FC<ProfileColumnProps> = ({ profile, date, chores, on
               padding: '1.5rem 0.5rem',
               textAlign: 'center',
               color: 'var(--sky-text-secondary)',
-              fontSize: '0.85rem',
+              fontSize: '1rem',
               opacity: 0.7,
             }}
           >
@@ -135,6 +140,15 @@ const ProfileColumn: React.FC<ProfileColumnProps> = ({ profile, date, chores, on
             return (
               <div
                 key={chore.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => onChoreClick(chore)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onChoreClick(chore)
+                  }
+                }}
                 style={{
                   background: completed || approved ? cardBgDone : cardBg,
                   borderRadius: '14px',
@@ -144,18 +158,17 @@ const ProfileColumn: React.FC<ProfileColumnProps> = ({ profile, date, chores, on
                   gap: '0.5rem',
                   opacity: approved ? 0.7 : 1,
                   transition: 'all 0.15s ease',
+                  cursor: 'pointer',
                 }}
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div
                     style={{
                       fontWeight: 600,
-                      fontSize: '0.9rem',
-                      lineHeight: 1.25,
+                      fontSize: '1.15rem',
+                      lineHeight: 1.3,
                       textDecoration: approved ? 'line-through' : 'none',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
+                      wordBreak: 'break-word',
                     }}
                     title={chore.title}
                   >
@@ -165,26 +178,26 @@ const ProfileColumn: React.FC<ProfileColumnProps> = ({ profile, date, chores, on
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '0.25rem',
-                      marginTop: '0.3rem',
-                      padding: '0.1rem 0.5rem',
+                      gap: '0.3rem',
+                      marginTop: '0.4rem',
+                      padding: '0.2rem 0.65rem',
                       borderRadius: '999px',
                       background: 'rgba(255,255,255,0.7)',
-                      fontSize: '0.7rem',
+                      fontSize: '0.95rem',
                       fontWeight: 700,
                       color: 'var(--sky-amber)',
                     }}
                   >
-                    <i className="pi pi-star-fill" style={{ fontSize: '0.65rem' }} />
+                    <i className="pi pi-star-fill" style={{ fontSize: '0.9rem' }} />
                     <span>{chore.starValue}</span>
                     {pending && (
                       <span
                         style={{
-                          marginLeft: '0.35rem',
+                          marginLeft: '0.4rem',
                           color: 'var(--sky-amber)',
                           textTransform: 'uppercase',
                           letterSpacing: '0.05em',
-                          fontSize: '0.6rem',
+                          fontSize: '0.75rem',
                         }}
                         title="Waiting for admin approval"
                       >
@@ -193,7 +206,7 @@ const ProfileColumn: React.FC<ProfileColumnProps> = ({ profile, date, chores, on
                     )}
                   </div>
                 </div>
-                <div style={{ flexShrink: 0 }}>
+                <div style={{ flexShrink: 0 }} onClick={e => e.stopPropagation()}>
                   <Checkbox
                     checked={completed}
                     onChange={() => onToggleComplete(chore, date)}
@@ -212,6 +225,11 @@ const ProfileColumn: React.FC<ProfileColumnProps> = ({ profile, date, chores, on
 }
 
 const ChoresDayView: React.FC<ChoresDayViewProps> = ({ date, chores, profiles, onToggleComplete }) => {
+  const [selectedChore, setSelectedChore] = useState<Chore | null>(null)
+  const selectedProfile = selectedChore
+    ? profiles.find(p => p.id === selectedChore.assignedProfileId)
+    : undefined
+
   if (profiles.length === 0) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--sky-text-secondary)' }}>
@@ -220,24 +238,134 @@ const ChoresDayView: React.FC<ChoresDayViewProps> = ({ date, chores, profiles, o
     )
   }
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: `repeat(${profiles.length}, minmax(260px, 1fr))`,
-        gap: '1rem',
-        width: '100%',
-      }}
-    >
-      {profiles.map(p => (
-        <ProfileColumn
-          key={p.id}
-          profile={p}
-          date={date}
-          chores={chores}
-          onToggleComplete={onToggleComplete}
-        />
-      ))}
-    </div>
+    <>
+      <div
+        className="sky-chores-day-grid"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${profiles.length}, minmax(260px, 1fr))`,
+          gap: '1rem',
+          width: '100%',
+        }}
+      >
+        {profiles.map(p => (
+          <ProfileColumn
+            key={p.id}
+            profile={p}
+            date={date}
+            chores={chores}
+            onToggleComplete={onToggleComplete}
+            onChoreClick={setSelectedChore}
+          />
+        ))}
+      </div>
+
+      <Dialog
+        visible={!!selectedChore}
+        onHide={() => setSelectedChore(null)}
+        style={{ width: '90vw', maxWidth: '560px' }}
+        showHeader={false}
+        contentStyle={{ padding: 0 }}
+        dismissableMask
+      >
+        {selectedChore && (
+          <div>
+            <div
+              style={{
+                background: selectedProfile?.color ?? 'var(--sky-amber)',
+                color: '#fff',
+                padding: '1.25rem 1.5rem',
+                borderTopLeftRadius: '6px',
+                borderTopRightRadius: '6px',
+              }}
+            >
+              {selectedProfile && (
+                <div
+                  style={{
+                    fontSize: '0.95rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    opacity: 0.9,
+                    marginBottom: '0.5rem',
+                  }}
+                >
+                  {selectedProfile.name}
+                </div>
+              )}
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: '1.6rem',
+                  lineHeight: 1.25,
+                  fontWeight: 700,
+                  wordBreak: 'break-word',
+                }}
+              >
+                {selectedChore.title}
+              </h3>
+            </div>
+            <div style={{ padding: '1.5rem 1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  alignSelf: 'flex-start',
+                  padding: '0.35rem 0.85rem',
+                  borderRadius: '999px',
+                  background: 'rgba(0, 0, 0, 0.04)',
+                  fontSize: '1.1rem',
+                  fontWeight: 700,
+                  color: 'var(--sky-amber)',
+                }}
+              >
+                <i className="pi pi-star-fill" style={{ fontSize: '1.1rem' }} />
+                <span>{selectedChore.starValue}</span>
+                {selectedChore.recurrence !== 'None' && (
+                  <>
+                    <span style={{ margin: '0 0.25rem', opacity: 0.4, color: 'var(--sky-text-secondary)' }}>·</span>
+                    <span style={{ color: 'var(--sky-text-secondary)', fontWeight: 600, fontSize: '1rem' }}>
+                      {selectedChore.recurrence}
+                    </span>
+                  </>
+                )}
+              </div>
+
+              <div>
+                <div
+                  style={{
+                    color: selectedProfile?.color ?? 'var(--sky-text-secondary)',
+                    fontSize: '1rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    fontWeight: 700,
+                    marginBottom: '0.5rem',
+                  }}
+                >
+                  Description
+                </div>
+                {selectedChore.description?.trim() ? (
+                  <div style={{ fontSize: '1.2rem', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
+                    {selectedChore.description}
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      fontSize: '1.1rem',
+                      lineHeight: 1.5,
+                      color: 'var(--sky-text-secondary)',
+                      fontStyle: 'italic',
+                    }}
+                  >
+                    No description for this chore.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </Dialog>
+    </>
   )
 }
 

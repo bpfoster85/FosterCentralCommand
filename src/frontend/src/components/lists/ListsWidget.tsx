@@ -154,6 +154,7 @@ const ListsWidget: React.FC<ListsWidgetProps> = ({ profiles, favoritesOnly, isFu
         visible={newListVisible}
         onHide={() => setNewListVisible(false)}
         style={{ width: '90vw', maxWidth: '440px' }}
+        dismissableMask
         footer={
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
             <Button label="Cancel" className="p-button-text" onClick={() => setNewListVisible(false)} />

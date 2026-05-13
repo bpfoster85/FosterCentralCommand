@@ -1,9 +1,25 @@
 {
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/assets/*", "/*.{css,js,ico,png,jpg,jpeg,gif,svg,webp,woff,woff2,ttf,map,json}"]
+    "exclude": ["/assets/*", "/sw.js", "/workbox-*.js", "/manifest.webmanifest", "/*.{css,js,ico,png,jpg,jpeg,gif,svg,webp,woff,woff2,ttf,map,json,webmanifest}"]
   },
   "mimeTypes": {
-    ".json": "application/json"
-  }
+    ".json": "application/json",
+    ".webmanifest": "application/manifest+json"
+  },
+  "routes": [
+    {
+      "route": "/sw.js",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate",
+        "service-worker-allowed": "/"
+      }
+    },
+    {
+      "route": "/manifest.webmanifest",
+      "headers": {
+        "cache-control": "no-cache"
+      }
+    }
+  ]
 }

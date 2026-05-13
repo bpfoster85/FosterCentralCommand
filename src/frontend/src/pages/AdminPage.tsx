@@ -1,15 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Button } from 'primereact/button'
-import { InputNumber } from 'primereact/inputnumber'
 import { InputText } from 'primereact/inputtext'
 import { InputTextarea } from 'primereact/inputtextarea'
 import { ProgressBar } from 'primereact/progressbar'
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog'
+import { Slider } from 'primereact/slider'
 import { Toast } from 'primereact/toast'
 import { useRef } from 'react'
 import { useProfiles } from '../hooks/useProfiles'
 import { useChores } from '../hooks/useChores'
 import ChoreEditorDialog from '../components/chores/ChoreEditorDialog'
+import MobileProfilePicker from '../components/profiles/MobileProfilePicker'
 import { getMyFamily, updateFamily, type FamilyDto } from '../api/families'
 import type { Chore, Profile } from '../types'
 
@@ -39,8 +40,10 @@ const AdminPage: React.FC = () => {
 
   const toast = useRef<Toast>(null)
 
-  // Award-stars panel state
-  const [awardProfileId, setAwardProfileId] = useState<string | null>(null)
+  // Single profile selector that drives BOTH the Award Stars panel and the
+  // Manage Chores list filter. null = "All" (chores list shows everything;
+  // awarding stars is disabled).
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
   const [awardAmount, setAwardAmount] = useState<number>(1)
 
   // Family settings panel state
@@ -70,12 +73,14 @@ const AdminPage: React.FC = () => {
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingChore, setEditingChore] = useState<Chore | null>(null)
 
-  // Manage-chores filter (null = all)
-  const [filterProfileId, setFilterProfileId] = useState<string | null>(null)
-
   const filteredChores = useMemo(
-    () => (filterProfileId ? chores.filter(c => c.assignedProfileId === filterProfileId) : chores),
-    [chores, filterProfileId]
+    () => (selectedProfileId ? chores.filter(c => c.assignedProfileId === selectedProfileId) : chores),
+    [chores, selectedProfileId]
+  )
+
+  const selectedProfile = useMemo(
+    () => profiles.find(p => p.id === selectedProfileId) ?? null,
+    [profiles, selectedProfileId]
   )
 
   const pending: PendingItem[] = useMemo(() => {
@@ -128,9 +133,9 @@ const AdminPage: React.FC = () => {
   }
 
   const handleAward = async () => {
-    if (!awardProfileId || !awardAmount) return
-    await adjustStars(awardProfileId, awardAmount)
-    const profile = profiles.find(p => p.id === awardProfileId)
+    if (!selectedProfileId || !awardAmount) return
+    await adjustStars(selectedProfileId, awardAmount)
+    const profile = profiles.find(p => p.id === selectedProfileId)
     toast.current?.show({
       severity: 'success',
       summary: awardAmount >= 0 ? 'Stars awarded' : 'Stars removed',
@@ -214,13 +219,20 @@ const AdminPage: React.FC = () => {
     })
 
   return (
-    <div style={{ flex: 1, overflow: 'auto', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div className="admin-page" style={{ flex: 1, overflow: 'auto', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <Toast ref={toast} />
       <ConfirmDialog />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
         <i className="pi pi-shield" style={{ fontSize: '1.25rem', color: 'var(--sky-amber)' }} />
         <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Admin</h2>
+        <Button
+          label="New Chore"
+          icon="pi pi-plus"
+          onClick={openCreateChore}
+          disabled={profiles.length === 0}
+          style={{ marginLeft: 'auto' }}
+        />
       </div>
 
       {/* === Pending approvals === */}
@@ -324,6 +336,92 @@ const AdminPage: React.FC = () => {
         )}
       </section>
 
+      {/* === Profile selector (drives Award Stars + Manage Chores) === */}
+      <section className="sky-card" style={{ padding: '1.25rem' }}>
+        <header style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+          <i className="pi pi-users" style={{ color: 'var(--sky-amber)' }} />
+          <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600 }}>
+            Profile
+          </h3>
+          <span style={{ fontSize: '0.85rem', color: 'var(--sky-text-secondary)', marginLeft: '0.5rem' }}>
+            Filters Award Stars and Chores below
+          </span>
+        </header>
+
+        {profiles.length === 0 ? (
+          <div style={{ padding: '0.75rem', color: 'var(--sky-text-secondary)' }}>
+            No profiles available.
+          </div>
+        ) : (
+          <>
+            {/* Mobile: inline collapsible picker */}
+            <div className="sky-profile-filter-select">
+              <MobileProfilePicker
+                profiles={profiles}
+                value={selectedProfileId}
+                onChange={setSelectedProfileId}
+              />
+            </div>
+
+            {/* Desktop pill row */}
+            <div className="sky-profile-filter sky-profile-filter-pills">
+              <button
+                type="button"
+                className="sky-profile-pill"
+                onClick={() => setSelectedProfileId(null)}
+                style={{
+                  background: selectedProfileId === null ? 'var(--sky-lagoon-deep)' : undefined,
+                  color: selectedProfileId === null ? '#fff' : undefined,
+                  borderColor: selectedProfileId === null ? 'var(--sky-lagoon-deep)' : undefined,
+                  fontWeight: 700,
+                }}
+              >
+                <span>All</span>
+              </button>
+              {profiles.map(p => {
+                const active = selectedProfileId === p.id
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className="sky-profile-pill"
+                    onClick={() => setSelectedProfileId(p.id)}
+                    style={{
+                      background: active ? p.color : undefined,
+                      color: active ? '#fff' : undefined,
+                      borderColor: active ? p.color : undefined,
+                      fontWeight: 700,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        background: active ? 'rgba(255,255,255,0.25)' : p.color,
+                        color: '#fff',
+                        fontWeight: 700,
+                        fontSize: '0.7rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {p.name.charAt(0).toUpperCase()}
+                    </span>
+                    <span>{p.name}</span>
+                    <span style={{ fontSize: '0.95rem', opacity: 0.9, marginLeft: '0.35rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <i className="pi pi-star-fill" style={{ fontSize: '0.95rem', color: active ? '#fff' : 'var(--sky-amber)' }} />
+                      <span>{p.totalStars ?? 0}</span>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </>
+        )}
+      </section>
+
       {/* === Award stars === */}
       <section className="sky-card" style={{ padding: '1.25rem' }}>
         <header style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
@@ -331,92 +429,177 @@ const AdminPage: React.FC = () => {
           <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600 }}>Award Stars</h3>
         </header>
 
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div style={{ flex: 1, minWidth: '200px' }}>
-            <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 500, fontSize: '0.85rem' }}>
-              Profile
-            </label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-              {profiles.length === 0 ? (
-                <span style={{ fontSize: '0.85rem', color: 'var(--sky-text-secondary)' }}>
-                  No profiles available
-                </span>
-              ) : (
-                profiles.map(p => {
-                  const selected = awardProfileId === p.id
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => setAwardProfileId(selected ? null : p.id)}
-                      aria-pressed={selected}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.4rem',
-                        padding: '0.4rem 0.85rem',
-                        borderRadius: '999px',
-                        border: `2px solid ${selected ? p.color : 'transparent'}`,
-                        background: selected
-                          ? p.color
-                          : 'var(--sky-surface-soft, rgba(160, 200, 220, 0.08))',
-                        color: selected ? '#fff' : 'var(--sky-text-primary)',
-                        fontWeight: 600,
-                        fontSize: '0.85rem',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          background: selected ? '#fff' : p.color,
-                          flexShrink: 0,
-                        }}
-                      />
-                      {p.name}
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.2rem',
-                          color: selected ? '#fff' : 'var(--sky-amber)',
-                          fontWeight: 700,
-                        }}
-                      >
-                        <i className="pi pi-star-fill" style={{ fontSize: '0.7rem' }} />
-                        {p.totalStars ?? 0}
-                      </span>
-                    </button>
-                  )
-                })
-              )}
-            </div>
+        {!selectedProfile ? (
+          <div style={{ padding: '0.75rem', color: 'var(--sky-text-secondary)' }}>
+            Select a profile above to award or remove stars.
           </div>
-          <div style={{ width: '240px' }}>
-            <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 500, fontSize: '0.85rem' }}>
-              Amount (negative to remove)
-            </label>
-            <InputNumber
-              value={awardAmount}
-              onValueChange={e => setAwardAmount(typeof e.value === 'number' ? e.value : 0)}
-              showButtons
-              buttonLayout="horizontal"
-              incrementButtonIcon="pi pi-plus"
-              decrementButtonIcon="pi pi-minus"
-              inputStyle={{ width: '100%', textAlign: 'center' }}
-              className="w-full"
+        ) : (
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div style={{ flex: 1, minWidth: '200px' }}>
+              <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 500, fontSize: '0.85rem' }}>
+                Awarding to
+              </label>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.55rem',
+                  padding: '0.5rem 0.95rem',
+                  borderRadius: '999px',
+                  background: selectedProfile.color,
+                  color: '#fff',
+                  fontWeight: 700,
+                }}
+              >
+                <span
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    background: 'rgba(255,255,255,0.28)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.8rem',
+                  }}
+                >
+                  {selectedProfile.name.charAt(0).toUpperCase()}
+                </span>
+                <span>{selectedProfile.name}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginLeft: '0.4rem' }}>
+                  <i className="pi pi-star-fill" />
+                  {selectedProfile.totalStars ?? 0}
+                </span>
+              </div>
+            </div>
+            <div style={{ flex: '1 1 280px', minWidth: '240px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem', gap: '0.5rem' }}>
+                <label style={{ fontWeight: 500, fontSize: '0.85rem' }}>
+                  Amount (negative to remove)
+                </label>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                    padding: '0.2rem 0.6rem',
+                    borderRadius: '999px',
+                    background: awardAmount === 0
+                      ? 'var(--sky-surface-soft, rgba(160,200,220,0.15))'
+                      : awardAmount > 0
+                        ? 'var(--sky-amber)'
+                        : 'var(--sky-coral, #d04848)',
+                    color: awardAmount === 0 ? 'var(--sky-text-secondary)' : '#fff',
+                    fontWeight: 700,
+                    fontSize: '0.85rem',
+                    minWidth: '3.25rem',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {awardAmount > 0 ? `+${awardAmount}` : awardAmount}
+                  <i className="pi pi-star-fill" style={{ fontSize: '0.7rem' }} />
+                </span>
+              </div>
+              <Slider
+                value={awardAmount}
+                onChange={e => setAwardAmount(typeof e.value === 'number' ? e.value : 0)}
+                min={-5}
+                max={10}
+                step={1}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--sky-text-secondary)', marginTop: '0.3rem' }}>
+                <span>-5</span>
+                <span>0</span>
+                <span>+10</span>
+              </div>
+            </div>
+            <Button
+              label="Apply"
+              icon="pi pi-check"
+              disabled={awardAmount === 0}
+              onClick={handleAward}
             />
           </div>
-          <Button
-            label="Apply"
-            icon="pi pi-check"
-            disabled={!awardProfileId || awardAmount === 0}
-            onClick={handleAward}
-          />
-        </div>
+        )}
+      </section>
+
+      {/* === Manage chores === */}
+      <section className="sky-card" style={{ padding: '1.25rem' }}>
+        <header style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+          <i className="pi pi-list" style={{ color: 'var(--sky-amber)' }} />
+          <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600, flex: 1 }}>
+            Chores{selectedProfile ? ` · ${selectedProfile.name}` : ''}
+          </h3>
+          <span style={{ fontSize: '0.8rem', color: 'var(--sky-text-secondary)' }}>
+            {filteredChores.length} {filteredChores.length === 1 ? 'chore' : 'chores'}
+          </span>
+        </header>
+
+        {choresLoading ? (
+          <ProgressBar mode="indeterminate" style={{ height: '4px' }} />
+        ) : chores.length === 0 ? (
+          <div style={{ padding: '0.75rem', color: 'var(--sky-text-secondary)' }}>
+            No chores yet. Create one to get started.
+          </div>
+        ) : filteredChores.length === 0 ? (
+          <div style={{ padding: '0.75rem', color: 'var(--sky-text-secondary)' }}>
+            No chores assigned to this profile.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {filteredChores.map(c => {
+              const owner = profiles.find(p => p.id === c.assignedProfileId)
+              const recurrenceLabel =
+                c.recurrence === 'None' ? 'One time' :
+                c.recurrence === 'Daily' ? 'Every day' :
+                c.recurrence === 'EveryOtherDay' ? 'Every other day' :
+                c.recurrence === 'Weekly' ? 'Weekly' : c.recurrence
+              return (
+                <div
+                  key={c.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.75rem 0.9rem',
+                    borderLeft: `4px solid ${owner?.color ?? '#888'}`,
+                    background: 'var(--sky-surface-soft, rgba(160, 200, 220, 0.08))',
+                    borderRadius: 'var(--sky-radius-md, 12px)',
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600 }}>{c.title}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--sky-text-secondary)' }}>
+                      {owner?.name ?? 'Unassigned'} · {recurrenceLabel}
+                      {c.recurrence === 'None' ? ` · due ${formatDateKey(c.dueDate.slice(0, 10))}` : ''}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                      color: 'var(--sky-amber)',
+                      fontWeight: 700,
+                      fontSize: '0.9rem',
+                    }}
+                  >
+                    <i className="pi pi-star-fill" style={{ fontSize: '0.8rem' }} />
+                    {c.starValue}
+                  </div>
+                  <Button icon="pi pi-pencil" className="p-button-text p-button-sm p-button-rounded" onClick={() => openEditChore(c)} aria-label="Edit" />
+                  <Button
+                    icon="pi pi-trash"
+                    className="p-button-text p-button-sm p-button-rounded"
+                    style={{ color: 'var(--sky-coral)' }}
+                    onClick={() => handleDeleteChore(c.id)}
+                    aria-label="Delete"
+                  />
+                </div>
+              )
+            })}
+          </div>
+        )}
       </section>
 
       {/* === Family / Google settings === */}
@@ -595,141 +778,6 @@ const AdminPage: React.FC = () => {
                 )}
               </div>
             </div>
-          </div>
-        )}
-      </section>
-
-      {/* === Manage chores === */}
-      <section className="sky-card" style={{ padding: '1.25rem' }}>
-        <header style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-          <i className="pi pi-list" style={{ color: 'var(--sky-amber)' }} />
-          <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600, flex: 1 }}>Chores</h3>
-          <Button label="New Chore" icon="pi pi-plus" className="p-button-sm" onClick={openCreateChore} disabled={profiles.length === 0} />
-        </header>
-
-        {profiles.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.75rem' }}>
-            <button
-              type="button"
-              onClick={() => setFilterProfileId(null)}
-              style={{
-                padding: '0.35rem 0.85rem',
-                borderRadius: '999px',
-                border: filterProfileId === null
-                  ? '2px solid var(--sky-lagoon-deep, #2c5d70)'
-                  : '2px solid var(--sky-border, rgba(0,0,0,0.12))',
-                background: filterProfileId === null ? 'var(--sky-lagoon-deep, #2c5d70)' : 'transparent',
-                color: filterProfileId === null ? '#fff' : 'var(--sky-text-primary)',
-                fontWeight: 600,
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              All ({chores.length})
-            </button>
-            {profiles.map(p => {
-              const count = chores.filter(c => c.assignedProfileId === p.id).length
-              const selected = filterProfileId === p.id
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => setFilterProfileId(p.id)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    padding: '0.35rem 0.85rem',
-                    borderRadius: '999px',
-                    border: `2px solid ${selected ? p.color : 'var(--sky-border, rgba(0,0,0,0.12))'}`,
-                    background: selected ? p.color : 'transparent',
-                    color: selected ? '#fff' : 'var(--sky-text-primary)',
-                    fontWeight: 600,
-                    fontSize: '0.8rem',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <span
-                    aria-hidden
-                    style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      background: selected ? '#fff' : p.color,
-                    }}
-                  />
-                  {p.name} ({count})
-                </button>
-              )
-            })}
-          </div>
-        )}
-
-        {choresLoading ? (
-          <ProgressBar mode="indeterminate" style={{ height: '4px' }} />
-        ) : chores.length === 0 ? (
-          <div style={{ padding: '0.75rem', color: 'var(--sky-text-secondary)' }}>
-            No chores yet. Create one to get started.
-          </div>
-        ) : filteredChores.length === 0 ? (
-          <div style={{ padding: '0.75rem', color: 'var(--sky-text-secondary)' }}>
-            No chores assigned to this profile.
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {filteredChores.map(c => {
-              const owner = profiles.find(p => p.id === c.assignedProfileId)
-              const recurrenceLabel =
-                c.recurrence === 'None' ? 'One time' :
-                c.recurrence === 'Daily' ? 'Every day' :
-                c.recurrence === 'EveryOtherDay' ? 'Every other day' :
-                c.recurrence === 'Weekly' ? 'Weekly' : c.recurrence
-              return (
-                <div
-                  key={c.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    padding: '0.75rem 0.9rem',
-                    borderLeft: `4px solid ${owner?.color ?? '#888'}`,
-                    background: 'var(--sky-surface-soft, rgba(160, 200, 220, 0.08))',
-                    borderRadius: 'var(--sky-radius-md, 12px)',
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600 }}>{c.title}</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--sky-text-secondary)' }}>
-                      {owner?.name ?? 'Unassigned'} · {recurrenceLabel}
-                      {c.recurrence === 'None' ? ` · due ${formatDateKey(c.dueDate.slice(0, 10))}` : ''}
-                    </div>
-                  </div>
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.25rem',
-                      color: 'var(--sky-amber)',
-                      fontWeight: 700,
-                      fontSize: '0.9rem',
-                    }}
-                  >
-                    <i className="pi pi-star-fill" style={{ fontSize: '0.8rem' }} />
-                    {c.starValue}
-                  </div>
-                  <Button icon="pi pi-pencil" className="p-button-text p-button-sm p-button-rounded" onClick={() => openEditChore(c)} aria-label="Edit" />
-                  <Button
-                    icon="pi pi-trash"
-                    className="p-button-text p-button-sm p-button-rounded"
-                    style={{ color: 'var(--sky-coral)' }}
-                    onClick={() => handleDeleteChore(c.id)}
-                    aria-label="Delete"
-                  />
-                </div>
-              )
-            })}
           </div>
         )}
       </section>

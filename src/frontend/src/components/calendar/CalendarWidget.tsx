@@ -84,6 +84,15 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
   const [eventDetail, setEventDetail] = useState<any>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('week')
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()))
+  const [selectedDate, setSelectedDate] = useState<Date>(() => startOfDay(new Date()))
+  const [previousViewMode, setPreviousViewMode] = useState<ViewMode | null>(null)
+  // Visible date window for the active view; drives per-profile event counts so
+  // pill totals match what the user actually sees. Week view sets this from
+  // weekStart; month/day views let FullCalendar drive it via datesSet.
+  const [visibleRange, setVisibleRange] = useState<{ start: Date; end: Date }>(() => ({
+    start: startOfWeek(new Date()),
+    end: addDays(startOfWeek(new Date()), 7),
+  }))
   const [createOpen, setCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState<CreateEventForm>(() => buildDefaultCreateForm(new Date()))
   const [createSaving, setCreateSaving] = useState(false)
@@ -150,15 +159,25 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
     return luminance > 0.6 ? '#2c3e3e' : '#ffffff'
   }
 
-  // Per-profile event counts (and unmatched count).
+  // Per-profile event counts (and unmatched count), scoped to the active view's
+  // visible date window so the pill totals match what the user sees.
   const { countsByProfileId, totalCount } = useMemo(() => {
     const counts: Record<string, number> = {}
+    const rangeStart = visibleRange.start.getTime()
+    const rangeEnd = visibleRange.end.getTime()
+    let total = 0
     for (const e of events) {
+      const evStart = new Date(e.start).getTime()
+      const evEnd = e.end ? new Date(e.end).getTime() : evStart
+      // Overlaps the visible window if the event ends after the window start
+      // and starts before the window end.
+      if (evEnd < rangeStart || evStart >= rangeEnd) continue
+      total += 1
       const matched = findProfileMatch(e.title)
       if (matched) counts[matched.id] = (counts[matched.id] || 0) + 1
     }
-    return { countsByProfileId: counts, totalCount: events.length }
-  }, [events, findProfileMatch])
+    return { countsByProfileId: counts, totalCount: total }
+  }, [events, findProfileMatch, visibleRange])
 
   // Apply selected-profile filter client-side (multi-select; empty = show all).
   const visibleEvents = useMemo(
@@ -226,6 +245,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
       title: e.title,
       start: e.start,
       end: e.end,
+      allDay: e.allDay,
       extendedProps: {
         description: e.description,
         location: e.location,
@@ -239,6 +259,30 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
   const goPrevWeek = () => setWeekStart(prev => addDays(prev, -7))
   const goNextWeek = () => setWeekStart(prev => addDays(prev, 7))
   const goToday = () => setWeekStart(startOfWeek(new Date()))
+
+  // Keep the visible-range window in sync with the week view's anchor. The
+  // month/day views are driven by FullCalendar's datesSet callback instead.
+  useEffect(() => {
+    if (viewMode === 'week') {
+      setVisibleRange({ start: weekStart, end: addDays(weekStart, 7) })
+    }
+  }, [viewMode, weekStart])
+
+  // Jump to a specific date in day view (used by day-header clicks in week
+  // view and by navLinks in the FullCalendar month view). Remember where we
+  // came from so the Back button can restore it.
+  const jumpToDay = (date: Date) => {
+    setPreviousViewMode(viewMode)
+    setSelectedDate(startOfDay(date))
+    setViewMode('day')
+  }
+
+  // Return to whichever view the user was on before jumping to day view.
+  const goBackFromDay = () => {
+    if (!previousViewMode) return
+    setViewMode(previousViewMode)
+    setPreviousViewMode(null)
+  }
 
   // Navigate based on the current view mode. In week view we move our own
   // weekStart; in month/day views FullCalendar owns the date so we delegate
@@ -367,7 +411,10 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
                 key={mode}
                 type="button"
                 className={`sky-view-switch-btn ${viewMode === mode ? 'active' : ''}`}
-                onClick={() => setViewMode(mode)}
+                onClick={() => {
+                  setViewMode(mode)
+                  setPreviousViewMode(null)
+                }}
                 aria-pressed={viewMode === mode}
               >
                 {mode.charAt(0).toUpperCase() + mode.slice(1)}
@@ -395,10 +442,15 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
                 key={day.toISOString()}
                 className={`sky-day-tile ${today ? 'today' : ''}`}
               >
-                <div className="sky-day-tile-header">
+                <button
+                  type="button"
+                  className="sky-day-tile-header"
+                  onClick={() => jumpToDay(day)}
+                  aria-label={`Open day view for ${DAY_NAME.format(day)} ${day.getDate()}`}
+                >
                   <span className="sky-day-tile-name">{DAY_NAME.format(day)}</span>
                   <span className="sky-day-tile-num">{day.getDate()}</span>
-                </div>
+                </button>
                 <div className="sky-day-tile-body">
                   {dayEvents.length === 0 ? (
                     <div className="sky-day-tile-empty">No events</div>
@@ -475,9 +527,19 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
             ref={calendarRef}
             plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
             initialView={viewMode === 'month' ? 'dayGridMonth' : 'timeGridDay'}
+            initialDate={selectedDate}
             key={viewMode /* force remount on view change */}
+            customButtons={{
+              back: {
+                text: '\u2039 Back',
+                click: goBackFromDay,
+              },
+            }}
             headerToolbar={{
-              left: 'prev,next today',
+              left:
+                viewMode === 'day' && previousViewMode
+                  ? 'back prev,next today'
+                  : 'prev,next today',
               center: 'title',
               right: ''
             }}
@@ -501,6 +563,9 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
             eventShortHeight={56}
             eventTimeFormat={{ hour: 'numeric', minute: '2-digit', meridiem: 'short' }}
             scrollTime="07:00:00"
+            navLinks
+            navLinkDayClick={date => jumpToDay(date)}
+            datesSet={arg => setVisibleRange({ start: arg.start, end: arg.end })}
             eventClick={info => setEventDetail(info.event)}
           />
         </div>
@@ -510,14 +575,23 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
       <Dialog
         visible={!!eventDetail}
         onHide={() => setEventDetail(null)}
-        style={{ width: '90vw', maxWidth: '500px' }}
+        style={{ width: '90vw', maxWidth: '640px' }}
         showHeader={false}
         contentStyle={{ padding: 0 }}
+        dismissableMask
       >
         {eventDetail && (() => {
           const headerColor: string | undefined = eventDetail.extendedProps?.matchedProfileColor
-          const headerTextColor = headerColor ? getContrastText(headerColor) : 'var(--sky-text-primary)'
-          const headerBg = headerColor || 'var(--sky-surface-soft)'
+          const headerTextColor = '#ffffff'
+          const headerBg = headerColor || 'var(--sky-lagoon)'
+          const labelStyle: React.CSSProperties = {
+            color: 'var(--sky-text-secondary)',
+            fontSize: '1rem',
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+            fontWeight: 700,
+          }
+          const valueStyle: React.CSSProperties = { fontSize: '1.3rem', lineHeight: 1.4 }
           return (
             <>
               {/* Custom colored header */}
@@ -536,12 +610,12 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
                   {eventDetail.extendedProps?.matchedProfileName && (
                     <div
                       style={{
-                        fontSize: '0.7rem',
+                        fontSize: '0.95rem',
                         fontWeight: 600,
                         textTransform: 'uppercase',
                         letterSpacing: '0.08em',
                         opacity: 0.85,
-                        marginBottom: '0.35rem',
+                        marginBottom: '0.5rem',
                       }}
                     >
                       {eventDetail.extendedProps.matchedProfileName}
@@ -550,10 +624,10 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
                   <h3
                     style={{
                       margin: 0,
-                      fontSize: '1.2rem',
+                      fontSize: '1.75rem',
                       fontWeight: 600,
                       letterSpacing: '-0.01em',
-                      lineHeight: 1.3,
+                      lineHeight: 1.25,
                       color: headerTextColor,
                     }}
                   >
@@ -570,28 +644,74 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
               </div>
 
               {/* Body */}
-              <div style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ padding: '1.5rem 1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div>
-                  <strong style={{ color: 'var(--sky-text-secondary)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>When</strong>
-                  <p style={{ margin: '0.3rem 0 0 0' }}>
-                    {new Date(eventDetail.start).toLocaleString()}
-                    {eventDetail.end && (
+                  <strong style={labelStyle}>When</strong>
+                  {(() => {
+                    const start = new Date(eventDetail.start)
+                    const end = eventDetail.end ? new Date(eventDetail.end) : null
+                    const allDay = !!eventDetail.allDay
+                    const sameDay = end ? isSameDay(start, end) : true
+                    const dateFmt = (d: Date) =>
+                      d.toLocaleDateString(undefined, {
+                        weekday: 'long',
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })
+                    const timeFmt = (d: Date) =>
+                      d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+
+                    if (sameDay) {
+                      return (
+                        <>
+                          <p style={{ margin: '0.4rem 0 0 0', ...valueStyle }}>{dateFmt(start)}</p>
+                          {!allDay && (
+                            <p style={{ margin: '0.2rem 0 0 0', color: 'var(--sky-text-secondary)', ...valueStyle }}>
+                              {end && end.getTime() !== start.getTime()
+                                ? `${timeFmt(start)} \u2013 ${timeFmt(end)}`
+                                : timeFmt(start)}
+                            </p>
+                          )}
+                          {allDay && (
+                            <p style={{ margin: '0.2rem 0 0 0', color: 'var(--sky-text-secondary)', ...valueStyle }}>
+                              All day
+                            </p>
+                          )}
+                        </>
+                      )
+                    }
+
+                    // Multi-day: show each end of the range on its own line.
+                    return (
                       <>
-                        {' '}<span style={{ color: 'var(--sky-text-secondary)' }}>→</span>{' '}
-                        {new Date(eventDetail.end).toLocaleString()}
+                        <p style={{ margin: '0.4rem 0 0 0', ...valueStyle }}>
+                          {dateFmt(start)}
+                          {!allDay && (
+                            <span style={{ color: 'var(--sky-text-secondary)' }}> · {timeFmt(start)}</span>
+                          )}
+                        </p>
+                        <p style={{ margin: '0.2rem 0 0 0', ...valueStyle }}>
+                          <span style={{ color: 'var(--sky-text-secondary)' }}>→ </span>
+                          {dateFmt(end!)}
+                          {!allDay && (
+                            <span style={{ color: 'var(--sky-text-secondary)' }}> · {timeFmt(end!)}</span>
+                          )}
+                        </p>
                       </>
-                    )}
-                  </p>
+                    )
+                  })()}
                 </div>
 
                 {eventDetail.extendedProps.location && (
                   <div>
-                    <strong style={{ color: 'var(--sky-text-secondary)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Location</strong>
+                    <strong style={labelStyle}>Location</strong>
                     <a
                       href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(eventDetail.extendedProps.location)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="sky-event-location"
+                      style={valueStyle}
                     >
                       <i className="pi pi-map-marker" />
                       <span>{eventDetail.extendedProps.location}</span>
@@ -602,13 +722,14 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
 
                 {eventDetail.extendedProps.description && (
                   <div>
-                    <strong style={{ color: 'var(--sky-text-secondary)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Description</strong>
+                    <strong style={labelStyle}>Description</strong>
                     <div
                       style={{
-                        margin: '0.3rem 0 0 0',
+                        margin: '0.4rem 0 0 0',
                         whiteSpace: 'pre-wrap',
                         wordBreak: 'break-word',
-                        lineHeight: 1.5,
+                        lineHeight: 1.55,
+                        fontSize: '1.2rem',
                       }}
                       dangerouslySetInnerHTML={{ __html: eventDetail.extendedProps.description }}
                     />
@@ -617,7 +738,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
 
                 {eventDetail.extendedProps.attendees?.length > 0 && (
                   <div>
-                    <strong style={{ color: 'var(--sky-text-secondary)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Attendees</strong>
+                    <strong style={labelStyle}>Attendees</strong>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.5rem' }}>
                       {eventDetail.extendedProps.attendees.map((email: string) => (
                         <span key={email} className="sky-person-chip">{email}</span>

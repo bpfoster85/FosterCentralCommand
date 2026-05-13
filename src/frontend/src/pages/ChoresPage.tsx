@@ -5,6 +5,7 @@ import { useProfiles } from '../hooks/useProfiles'
 import { useChores } from '../hooks/useChores'
 import { useSwipe } from '../hooks/useSwipe'
 import ChoresDayView from '../components/chores/ChoresDayView'
+import MobileProfilePicker from '../components/profiles/MobileProfilePicker'
 import type { Chore, Profile } from '../types'
 import { addDays, toDateKey } from '../utils/choreSchedule'
 
@@ -90,59 +91,72 @@ const ChoresPage: React.FC = () => {
 
       {/* Profile filter pills */}
       {profiles.length > 0 && (
-        <div className="sky-profile-filter" style={{ marginBottom: '1rem' }}>
-          <button
-            type="button"
-            className="sky-profile-pill"
-            onClick={() => setProfileFilter(null)}
-            style={{
-              background: profileFilter === null ? 'var(--sky-amber)' : undefined,
-              color: profileFilter === null ? '#fff' : undefined,
-              borderColor: profileFilter === null ? 'var(--sky-amber)' : undefined,
-              fontWeight: profileFilter === null ? 600 : 500,
-            }}
-          >
-            <span>All</span>
-          </button>
-          {profiles.map(p => {
-            const active = p.id === profileFilter
-            return (
-              <button
-                key={p.id}
-                type="button"
-                className="sky-profile-pill"
-                onClick={() => setProfileFilter(p.id)}
-                style={{
-                  background: active ? p.color : undefined,
-                  color: active ? '#fff' : undefined,
-                  borderColor: active ? p.color : undefined,
-                  fontWeight: active ? 600 : 500,
-                }}
-              >
-                <span
+        <>
+          {/* Mobile: inline collapsible picker */}
+          <div className="sky-profile-filter-select" style={{ marginBottom: '1rem' }}>
+            <MobileProfilePicker
+              profiles={profiles}
+              value={profileFilter}
+              onChange={setProfileFilter}
+            />
+          </div>
+
+          {/* Desktop: pill row */}
+          <div className="sky-profile-filter sky-profile-filter-pills" style={{ marginBottom: '1rem' }}>
+            <button
+              type="button"
+              className="sky-profile-pill"
+              onClick={() => setProfileFilter(null)}
+              style={{
+                background: profileFilter === null ? 'var(--sky-amber)' : undefined,
+                color: profileFilter === null ? '#fff' : undefined,
+                borderColor: profileFilter === null ? 'var(--sky-amber)' : undefined,
+                fontWeight: 700,
+              }}
+            >
+              <span>All</span>
+            </button>
+            {profiles.map(p => {
+              const active = p.id === profileFilter
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="sky-profile-pill"
+                  onClick={() => setProfileFilter(p.id)}
                   style={{
-                    width: '20px',
-                    height: '20px',
-                    borderRadius: '50%',
-                    background: active ? 'rgba(255,255,255,0.25)' : p.color,
-                    color: '#fff',
+                    background: active ? p.color : undefined,
+                    color: active ? '#fff' : undefined,
+                    borderColor: active ? p.color : undefined,
                     fontWeight: 700,
-                    fontSize: '0.7rem',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
                   }}
                 >
-                  {p.name.charAt(0).toUpperCase()}
-                </span>
-                <span>{p.name}</span>
-                <span style={{ fontSize: '0.75rem', opacity: 0.85, marginLeft: '0.25rem' }}>
-                  ★ {p.totalStars ?? 0}
-                </span>
-              </button>
-            )
-          })}
-        </div>
+                  <span
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      background: active ? 'rgba(255,255,255,0.25)' : p.color,
+                      color: '#fff',
+                      fontWeight: 700,
+                      fontSize: '0.7rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {p.name.charAt(0).toUpperCase()}
+                  </span>
+                  <span>{p.name}</span>
+                  <span style={{ fontSize: '1.05rem', opacity: 0.9, marginLeft: '0.35rem', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                    <i className="pi pi-star-fill" style={{ fontSize: '1.05rem', color: active ? '#fff' : 'var(--sky-amber)' }} />
+                    <span style={{ fontSize: '0.95rem' }}>{p.totalStars ?? 0}</span>
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </>
       )}
 
       {/* Loading or empty state */}
