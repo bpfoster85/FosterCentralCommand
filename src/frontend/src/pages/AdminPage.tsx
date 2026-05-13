@@ -9,6 +9,7 @@ import { Toast } from 'primereact/toast'
 import { useRef } from 'react'
 import { useProfiles } from '../hooks/useProfiles'
 import { useChores } from '../hooks/useChores'
+import { useLists, useListItems } from '../hooks/useLists'
 import ChoreEditorDialog from '../components/chores/ChoreEditorDialog'
 import MobileProfilePicker from '../components/profiles/MobileProfilePicker'
 import { getMyFamily, updateFamily, type FamilyDto } from '../api/families'
@@ -52,6 +53,20 @@ const AdminPage: React.FC = () => {
   const [apiKey, setApiKey] = useState('')
   const [serviceAccount, setServiceAccount] = useState('')
   const [savingFamily, setSavingFamily] = useState(false)
+
+  // Grocery section
+  const GROCERY_NAME = 'Grocery'
+  const [groceryExpanded, setGroceryExpanded] = useState(false)
+  const { lists: shoppingLists, loading: listsLoading } = useLists()
+  const groceryList = useMemo(
+    () => shoppingLists.find(l => l.title.trim().toLowerCase() === GROCERY_NAME.toLowerCase()),
+    [shoppingLists]
+  )
+  const {
+    items: groceryItems,
+    loading: groceryItemsLoading,
+    deleteItem: deleteGroceryItem,
+  } = useListItems(groceryExpanded ? (groceryList?.id ?? null) : null)
 
   useEffect(() => {
     let cancelled = false
@@ -333,6 +348,90 @@ const AdminPage: React.FC = () => {
               </div>
             ))}
           </div>
+        )}
+      </section>
+
+      {/* === Grocery list (collapsible) === */}
+      <section className="sky-card" style={{ padding: '1.25rem' }}>
+        <header
+          onClick={() => setGroceryExpanded(v => !v)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            cursor: 'pointer',
+            userSelect: 'none',
+            marginBottom: groceryExpanded ? '0.75rem' : 0,
+          }}
+        >
+          <i className="pi pi-shopping-cart" style={{ color: 'var(--sky-amber)' }} />
+          <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600, flex: 1 }}>
+            Grocery List
+          </h3>
+          {groceryList && (
+            <span
+              style={{
+                padding: '0.1rem 0.55rem',
+                borderRadius: '999px',
+                background: 'var(--surface-200, rgba(0,0,0,0.08))',
+                color: 'var(--sky-text-secondary)',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+              }}
+            >
+              {groceryList.itemCount ?? 0}
+            </span>
+          )}
+          <Button
+            icon={groceryExpanded ? 'pi pi-chevron-up' : 'pi pi-chevron-down'}
+            className="p-button-text p-button-sm p-button-rounded"
+            onClick={e => {
+              e.stopPropagation()
+              setGroceryExpanded(v => !v)
+            }}
+            aria-label={groceryExpanded ? 'Collapse' : 'Expand'}
+          />
+        </header>
+
+        {groceryExpanded && (
+          listsLoading ? (
+            <ProgressBar mode="indeterminate" style={{ height: '4px' }} />
+          ) : !groceryList ? (
+            <div style={{ padding: '0.75rem', color: 'var(--sky-text-secondary)' }}>
+              No "Grocery" list yet.
+            </div>
+          ) : groceryItemsLoading ? (
+            <ProgressBar mode="indeterminate" style={{ height: '4px' }} />
+          ) : groceryItems.length === 0 ? (
+            <div style={{ padding: '0.75rem', color: 'var(--sky-text-secondary)' }}>
+              Nothing on the list.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {groceryItems.map(item => (
+                <div
+                  key={item.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.6rem 0.9rem',
+                    background: 'var(--sky-surface-soft, rgba(160, 200, 220, 0.08))',
+                    borderRadius: 'var(--sky-radius-md, 12px)',
+                  }}
+                >
+                  <span style={{ flex: 1, fontSize: '1rem', fontWeight: 500 }}>{item.title}</span>
+                  <Button
+                    icon="pi pi-trash"
+                    className="p-button-text p-button-sm p-button-rounded"
+                    style={{ color: 'var(--sky-coral)' }}
+                    onClick={() => deleteGroceryItem(item.id)}
+                    aria-label="Remove item"
+                  />
+                </div>
+              ))}
+            </div>
+          )
         )}
       </section>
 
