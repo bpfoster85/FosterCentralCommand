@@ -10,6 +10,7 @@ import { useRef } from 'react'
 import { useProfiles } from '../hooks/useProfiles'
 import { useChores } from '../hooks/useChores'
 import { useLists, useListItems } from '../hooks/useLists'
+import { usePullToRefresh } from '../hooks/usePullToRefresh'
 import ChoreEditorDialog from '../components/chores/ChoreEditorDialog'
 import MobileProfilePicker from '../components/profiles/MobileProfilePicker'
 import { getMyFamily, updateFamily, type FamilyDto } from '../api/families'
@@ -57,7 +58,7 @@ const AdminPage: React.FC = () => {
   // Grocery section
   const GROCERY_NAME = 'Grocery'
   const [groceryExpanded, setGroceryExpanded] = useState(false)
-  const { lists: shoppingLists, loading: listsLoading } = useLists()
+  const { lists: shoppingLists, loading: listsLoading, refetch: refetchLists } = useLists()
   const groceryList = useMemo(
     () => shoppingLists.find(l => l.title.trim().toLowerCase() === GROCERY_NAME.toLowerCase()),
     [shoppingLists]
@@ -66,7 +67,31 @@ const AdminPage: React.FC = () => {
     items: groceryItems,
     loading: groceryItemsLoading,
     deleteItem: deleteGroceryItem,
+    refetch: refetchGroceryItems,
   } = useListItems(groceryExpanded ? (groceryList?.id ?? null) : null)
+
+  // Pull-to-refresh on the whole admin page when running as an installed app.
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const refreshAll = React.useCallback(async () => {
+    const fetchFamily = getMyFamily()
+      .then(f => {
+        if (!f) return
+        setFamily(f)
+        setCalendarId(f.googleCalendarId ?? '')
+      })
+      .catch(() => { /* handled elsewhere */ })
+    const tasks: Array<Promise<unknown>> = [
+      refetchProfiles(),
+      refetchChores(),
+      refetchLists(),
+      fetchFamily,
+    ]
+    if (groceryExpanded && groceryList?.id) {
+      tasks.push(refetchGroceryItems())
+    }
+    await Promise.allSettled(tasks)
+  }, [refetchProfiles, refetchChores, refetchLists, refetchGroceryItems, groceryExpanded, groceryList?.id])
+  const pull = usePullToRefresh(scrollRef, { onRefresh: refreshAll })
 
   useEffect(() => {
     let cancelled = false
@@ -234,7 +259,61 @@ const AdminPage: React.FC = () => {
     })
 
   return (
-    <div className="admin-page" style={{ flex: 1, overflow: 'auto', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div
+      ref={scrollRef}
+      className="admin-page"
+      style={{
+        flex: 1,
+        overflow: 'auto',
+        padding: '1.25rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1.5rem',
+        overscrollBehaviorY: 'contain',
+        position: 'relative',
+      }}
+    >
+      {/* Pull-to-refresh indicator */}
+      <div
+        aria-hidden={pull.distance === 0 && !pull.refreshing}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          display: 'flex',
+          justifyContent: 'center',
+          pointerEvents: 'none',
+          transform: `translateY(${Math.max(0, pull.distance - 32)}px)`,
+          opacity: pull.distance > 4 || pull.refreshing ? 1 : 0,
+          transition: pull.refreshing || pull.distance === 0 ? 'transform 0.2s ease, opacity 0.2s ease' : 'none',
+          zIndex: 5,
+        }}
+      >
+        <div
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            background: 'var(--surface-card, #fff)',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.15)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--sky-amber)',
+          }}
+        >
+          <i
+            className={pull.refreshing ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'}
+            style={{
+              fontSize: '1.1rem',
+              transform: pull.refreshing ? 'none' : `rotate(${Math.min(pull.distance * 4, 360)}deg)`,
+              transition: pull.refreshing ? 'none' : 'transform 0.05s linear',
+            }}
+          />
+        </div>
+      </div>
+
       <Toast ref={toast} />
       <ConfirmDialog />
 
