@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { Button } from 'primereact/button'
 import { Dialog } from 'primereact/dialog'
 import { InputNumber } from 'primereact/inputnumber'
-import { InputText } from 'primereact/inputtext'
 import { ProgressBar } from 'primereact/progressbar'
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog'
 import { useProfiles } from '../hooks/useProfiles'
@@ -11,21 +10,15 @@ import GoalCard from '../components/chores/GoalCard'
 import CelebrationOverlay from '../components/chores/CelebrationOverlay'
 import type { Goal } from '../types'
 
-const EMOJI_PRESETS = ['🎮', '🎁', '🏖️', '🍕', '🎬', '🚲', '📚', '🎨', '⚽', '🛹', '🎤', '🌴', '⭐']
-
 const GoalsPage: React.FC = () => {
   const { profiles, loading: profilesLoading, refetch: refetchProfiles } = useProfiles()
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
 
   const selectedProfile = profiles.find(p => p.id === selectedProfileId) ?? null
 
-  const { goals, loading: goalsLoading, createGoal, deleteGoal, spendStars, winGoal, refetch: refetchGoals } = useGoals(
+  const { goals, loading: goalsLoading, deleteGoal, spendStars, winGoal, refetch: refetchGoals } = useGoals(
     selectedProfileId ?? undefined,
   )
-
-  // Goal creation dialog
-  const [createDialogVisible, setCreateDialogVisible] = useState(false)
-  const [goalForm, setGoalForm] = useState({ title: '', emoji: '⭐', starTarget: 10 })
 
   // Spend stars dialog
   const [spendDialogGoal, setSpendDialogGoal] = useState<Goal | null>(null)
@@ -33,20 +26,6 @@ const GoalsPage: React.FC = () => {
 
   // Celebration
   const [celebration, setCelebration] = useState<{ active: boolean; message: string }>({ active: false, message: '' })
-
-  const resetGoalForm = () => setGoalForm({ title: '', emoji: '⭐', starTarget: 10 })
-
-  const handleCreateGoal = async () => {
-    if (!selectedProfile || !goalForm.title.trim()) return
-    await createGoal({
-      profileId: selectedProfile.id,
-      title: goalForm.title.trim(),
-      emoji: goalForm.emoji || '⭐',
-      starTarget: goalForm.starTarget,
-    })
-    setCreateDialogVisible(false)
-    resetGoalForm()
-  }
 
   const handleDeleteGoal = (goal: Goal) => {
     confirmDialog({
@@ -90,20 +69,7 @@ const GoalsPage: React.FC = () => {
         onDone={() => setCelebration({ active: false, message: '' })}
       />
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '1.2rem', fontWeight: 600 }}>Goals</span>
-        {selectedProfile && (
-          <Button
-            icon="pi pi-plus"
-            label="New Goal"
-            className="p-button-sm"
-            onClick={() => setCreateDialogVisible(true)}
-          />
-        )}
-      </div>
-
-      {/* Profile selector */}
+      {/* Header + profile selector */}
       {profilesLoading ? (
         <ProgressBar mode="indeterminate" style={{ height: '4px', marginBottom: '1rem' }} />
       ) : profiles.length === 0 ? (
@@ -190,13 +156,9 @@ const GoalsPage: React.FC = () => {
                   style={{ fontSize: '3rem', marginBottom: '1rem', display: 'block' }}
                 />
                 <p>No goals yet for {selectedProfile?.name}.</p>
-                <Button
-                  label="Create First Goal"
-                  icon="pi pi-plus"
-                  className="p-button-outlined"
-                  style={{ marginTop: '0.75rem' }}
-                  onClick={() => setCreateDialogVisible(true)}
-                />
+                <p style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
+                  Goals can be added from the profile settings in the admin portal.
+                </p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -236,82 +198,6 @@ const GoalsPage: React.FC = () => {
           </div>
         </>
       )}
-
-      {/* Create Goal Dialog */}
-      <Dialog
-        header={`New Goal for ${selectedProfile?.name}`}
-        visible={createDialogVisible}
-        onHide={() => { setCreateDialogVisible(false); resetGoalForm() }}
-        style={{ width: '90vw', maxWidth: '440px' }}
-        dismissableMask
-        footer={
-          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-            <Button label="Cancel" className="p-button-text" onClick={() => setCreateDialogVisible(false)} />
-            <Button
-              label="Create Goal"
-              onClick={handleCreateGoal}
-              disabled={!goalForm.title.trim() || goalForm.starTarget < 1}
-            />
-          </div>
-        }
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Goal Name *</label>
-            <InputText
-              value={goalForm.title}
-              onChange={e => setGoalForm(f => ({ ...f, title: e.target.value }))}
-              className="w-full"
-              placeholder="e.g. New Video Game"
-              autoFocus
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>Emoji</label>
-            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-              {EMOJI_PRESETS.map(e => (
-                <button
-                  key={e}
-                  type="button"
-                  onClick={() => setGoalForm(f => ({ ...f, emoji: e }))}
-                  style={{
-                    fontSize: '1.5rem',
-                    background: goalForm.emoji === e ? 'var(--sky-surface-soft, #f3f4f6)' : 'none',
-                    border: goalForm.emoji === e ? '2px solid var(--primary-color)' : '2px solid transparent',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    padding: '0.2rem 0.3rem',
-                    lineHeight: 1,
-                  }}
-                  aria-label={`Use ${e} emoji`}
-                >
-                  {e}
-                </button>
-              ))}
-            </div>
-            <InputText
-              value={goalForm.emoji}
-              onChange={e => setGoalForm(f => ({ ...f, emoji: e.target.value }))}
-              className="w-full"
-              placeholder="Or type any emoji"
-              maxLength={8}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
-              Stars Required <i className="pi pi-star-fill" style={{ color: 'var(--sky-amber)', fontSize: '0.9rem' }} />
-            </label>
-            <InputNumber
-              value={goalForm.starTarget}
-              onValueChange={e => setGoalForm(f => ({ ...f, starTarget: e.value ?? 1 }))}
-              min={1}
-              max={9999}
-              showButtons
-              className="w-full"
-            />
-          </div>
-        </div>
-      </Dialog>
 
       {/* Spend Stars Dialog */}
       {spendDialogGoal && selectedProfile && (
