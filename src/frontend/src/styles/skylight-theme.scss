@@ -1638,3 +1638,13 @@ textarea.p-inputtext,
     // No-op fallback; pages set their own padding inline.
   }
 }
+
+
+// =============================================================================
+// Celebration Overlay — pop-in animation for the victory card
+// =============================================================================
+@keyframes sky-pop-in {
+  0%   { transform: scale(0.5); opacity: 0; }
+  70%  { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}

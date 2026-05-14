@@ -12,6 +12,7 @@ const navItems = [
   { label: 'Calendar', icon: 'pi pi-calendar', path: '/calendar' },
   { label: 'Lists', icon: 'pi pi-list', path: '/lists' },
   { label: 'Chores', icon: 'pi pi-star', path: '/chores' },
+  { label: 'Goals', icon: 'pi pi-flag', path: '/goals' },
   { label: 'Profiles', icon: 'pi pi-users', path: '/profiles' },
   { label: 'Admin', icon: 'pi pi-shield', path: '/admin' },
 ]

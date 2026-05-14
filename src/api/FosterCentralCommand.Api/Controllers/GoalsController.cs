@@ -67,8 +67,53 @@ public class GoalsController(IGoalRepository goalRepo, IProfileRepository profil
         return NoContent();
     }
 
+    /// <summary>
+    /// Spend stars from a profile's balance toward this goal.
+    /// Deducts from the profile's TotalStars and credits the goal's StarsApplied.
+    /// </summary>
+    [HttpPost("{id:guid}/spend-stars")]
+    public async Task<ActionResult<GoalDto>> SpendStars(Guid id, [FromBody] SpendStarsRequest request)
+    {
+        var goal = await goalRepo.GetByIdAsync(id.ToString());
+        if (goal == null) return NotFound();
+
+        if (goal.ProfileId != request.ProfileId.ToString())
+            return BadRequest("This goal belongs to a different profile.");
+
+        var profile = await profileRepo.GetByIdAsync(request.ProfileId.ToString());
+        if (profile == null) return BadRequest("Profile does not exist.");
+
+        if (profile.TotalStars < request.Amount)
+            return BadRequest("Not enough stars.");
+
+        profile.TotalStars -= request.Amount;
+        profile.UpdatedAt = DateTime.UtcNow;
+        await profileRepo.UpdateAsync(profile);
+
+        goal.StarsApplied += request.Amount;
+        goal.UpdatedAt = DateTime.UtcNow;
+        var updated = await goalRepo.UpdateAsync(goal);
+        return Ok(MapToDto(updated));
+    }
+
+    /// <summary>
+    /// Mark the goal as achieved (claim the award).
+    /// </summary>
+    [HttpPost("{id:guid}/win")]
+    public async Task<ActionResult<GoalDto>> Win(Guid id)
+    {
+        var goal = await goalRepo.GetByIdAsync(id.ToString());
+        if (goal == null) return NotFound();
+
+        goal.IsAchieved = true;
+        goal.UpdatedAt = DateTime.UtcNow;
+        var updated = await goalRepo.UpdateAsync(goal);
+        return Ok(MapToDto(updated));
+    }
+
     private static GoalDto MapToDto(Goal g) => new(
         Guid.TryParse(g.Id, out var gid) ? gid : Guid.Empty,
         Guid.TryParse(g.ProfileId, out var pid) ? pid : Guid.Empty,
-        g.Title, g.Emoji, g.StarTarget, g.CreatedAt, g.UpdatedAt);
+        g.Title, g.Emoji, g.StarTarget, g.StarsApplied, g.IsAchieved,
+        g.CreatedAt, g.UpdatedAt);
 }

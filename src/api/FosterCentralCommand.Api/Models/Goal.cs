@@ -16,6 +16,11 @@ public class Goal
     // Number of stars required to attain this goal
     public int StarTarget { get; set; }
 
+    // Stars the profile has already applied toward this goal
+    public int StarsApplied { get; set; }
+
+    public bool IsAchieved { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

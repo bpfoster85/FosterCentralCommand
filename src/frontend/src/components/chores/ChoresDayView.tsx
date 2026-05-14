@@ -8,6 +8,7 @@ import {
   isChoreCompletedOn,
   isChorePendingOn,
 } from '../../utils/choreSchedule'
+import CelebrationOverlay from './CelebrationOverlay'
 
 interface ChoresDayViewProps {
   date: Date
@@ -226,9 +227,21 @@ const ProfileColumn: React.FC<ProfileColumnProps> = ({ profile, date, chores, on
 
 const ChoresDayView: React.FC<ChoresDayViewProps> = ({ date, chores, profiles, onToggleComplete }) => {
   const [selectedChore, setSelectedChore] = useState<Chore | null>(null)
+  const [celebration, setCelebration] = useState<{ active: boolean; message: string }>({ active: false, message: '' })
   const selectedProfile = selectedChore
     ? profiles.find(p => p.id === selectedChore.assignedProfileId)
     : undefined
+
+  const handleToggleWithCelebration = (chore: Chore, d: Date) => {
+    const wasCompleted = isChoreCompletedOn(chore, d)
+    onToggleComplete(chore, d)
+    // Only celebrate when marking complete (not un-completing)
+    if (!wasCompleted && !isChoreApprovedOn(chore, d)) {
+      const profile = profiles.find(p => p.id === chore.assignedProfileId)
+      const name = profile ? profile.name : 'Great job'
+      setCelebration({ active: true, message: `${name} completed "${chore.title}"! +${chore.starValue} ⭐` })
+    }
+  }
 
   if (profiles.length === 0) {
     return (
@@ -239,6 +252,13 @@ const ChoresDayView: React.FC<ChoresDayViewProps> = ({ date, chores, profiles, o
   }
   return (
     <>
+      <CelebrationOverlay
+        active={celebration.active}
+        message={celebration.message}
+        duration={2800}
+        onDone={() => setCelebration({ active: false, message: '' })}
+      />
+
       <div
         className="sky-chores-day-grid"
         style={{
@@ -254,7 +274,7 @@ const ChoresDayView: React.FC<ChoresDayViewProps> = ({ date, chores, profiles, o
             profile={p}
             date={date}
             chores={chores}
-            onToggleComplete={onToggleComplete}
+            onToggleComplete={handleToggleWithCelebration}
             onChoreClick={setSelectedChore}
           />
         ))}

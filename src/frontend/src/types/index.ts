@@ -65,6 +65,8 @@ export interface Goal {
   title: string
   emoji: string
   starTarget: number
+  starsApplied: number
+  isAchieved: boolean
   createdAt: string
   updatedAt: string
 }
