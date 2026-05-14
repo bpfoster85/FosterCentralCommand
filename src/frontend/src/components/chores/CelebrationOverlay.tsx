@@ -257,6 +257,9 @@ const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
+        // pointerEvents: 'auto' on the container captures clicks for dismissal.
+        // The canvas child uses pointerEvents: 'none' so clicks pass through it
+        // to this container rather than being absorbed by the canvas element.
         pointerEvents: 'auto',
         display: 'flex',
         flexDirection: 'column',

@@ -363,8 +363,10 @@ const GoalsPage: React.FC = () => {
                 className="w-full"
               />
               <div style={{ marginTop: '0.4rem', fontSize: '0.82rem', color: 'var(--sky-text-secondary)' }}>
-                Goal progress: {spendDialogGoal.starsApplied} / {spendDialogGoal.starTarget} stars
-                {' '}({Math.max(0, spendDialogGoal.starTarget - spendDialogGoal.starsApplied)} still needed)
+                {(() => {
+                  const starsRemaining = Math.max(0, spendDialogGoal.starTarget - spendDialogGoal.starsApplied)
+                  return `Goal progress: ${spendDialogGoal.starsApplied} / ${spendDialogGoal.starTarget} stars (${starsRemaining} still needed)`
+                })()}
               </div>
             </div>
           </div>

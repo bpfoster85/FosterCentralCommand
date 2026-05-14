@@ -78,7 +78,7 @@ public class GoalsController(IGoalRepository goalRepo, IProfileRepository profil
         if (goal == null) return NotFound();
 
         if (goal.ProfileId != request.ProfileId.ToString())
-            return BadRequest("Profile does not own this goal.");
+            return BadRequest("This goal belongs to a different profile.");
 
         var profile = await profileRepo.GetByIdAsync(request.ProfileId.ToString());
         if (profile == null) return BadRequest("Profile does not exist.");
