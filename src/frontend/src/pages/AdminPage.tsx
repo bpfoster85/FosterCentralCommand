@@ -258,7 +258,7 @@ const AdminPage: React.FC = () => {
       style={{
         flex: 1,
         overflow: 'auto',
-        padding: '1.25rem',
+        padding: '2rem 1.25rem 1.25rem',
         display: 'flex',
         flexDirection: 'column',
         gap: '1.5rem',
