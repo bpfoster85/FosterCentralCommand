@@ -9,7 +9,7 @@ import { useProfiles } from '../hooks/useProfiles'
 import { useGoals } from '../hooks/useGoals'
 import GoalCard from '../components/chores/GoalCard'
 import CelebrationOverlay from '../components/chores/CelebrationOverlay'
-import type { Goal, Profile } from '../types'
+import type { Goal } from '../types'
 
 const EMOJI_PRESETS = ['🎮', '🎁', '🏖️', '🍕', '🎬', '🚲', '📚', '🎨', '⚽', '🛹', '🎤', '🌴', '⭐']
 

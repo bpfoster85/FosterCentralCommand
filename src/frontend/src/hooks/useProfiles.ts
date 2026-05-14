@@ -13,7 +13,7 @@ export const useProfiles = () => {
       const data = await profilesApi.getProfiles()
       setProfiles(data)
       setError(null)
-    } catch (err) {
+    } catch {
       setError('Failed to load profiles')
     } finally {
       setLoading(false)
