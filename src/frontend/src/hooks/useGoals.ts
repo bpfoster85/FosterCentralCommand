@@ -22,7 +22,7 @@ export const useGoals = (profileId?: string) => {
 
   useEffect(() => { fetchGoals() }, [fetchGoals])
 
-  const createGoal = async (data: Omit<Goal, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const createGoal = async (data: Omit<Goal, 'id' | 'createdAt' | 'updatedAt' | 'starsApplied' | 'isAchieved'>) => {
     const goal = await goalsApi.createGoal(data)
     setGoals(prev => [...prev, goal])
     return goal
@@ -39,5 +39,17 @@ export const useGoals = (profileId?: string) => {
     setGoals(prev => prev.filter(g => g.id !== id))
   }
 
-  return { goals, loading, error, refetch: fetchGoals, createGoal, updateGoal, deleteGoal }
+  const spendStars = async (goalId: string, profileId: string, amount: number) => {
+    const updated = await goalsApi.spendStarsOnGoal(goalId, profileId, amount)
+    setGoals(prev => prev.map(g => g.id === goalId ? updated : g))
+    return updated
+  }
+
+  const winGoal = async (goalId: string) => {
+    const updated = await goalsApi.winGoal(goalId)
+    setGoals(prev => prev.map(g => g.id === goalId ? updated : g))
+    return updated
+  }
+
+  return { goals, loading, error, refetch: fetchGoals, createGoal, updateGoal, deleteGoal, spendStars, winGoal }
 }
