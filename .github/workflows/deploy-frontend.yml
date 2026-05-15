@@ -11,6 +11,12 @@
 name: Deploy Frontend (SWA)
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/frontend/**"
+      - ".github/workflows/deploy-frontend.yml"
   workflow_dispatch:
 
 permissions:

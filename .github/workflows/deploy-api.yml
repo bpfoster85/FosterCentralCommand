@@ -15,6 +15,14 @@
 name: Deploy API
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/api/**"
+      - "tests/**"
+      - "Dockerfile"
+      - ".github/workflows/deploy-api.yml"
   workflow_dispatch:
     inputs:
       imageTag:

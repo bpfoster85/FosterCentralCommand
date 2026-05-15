@@ -255,7 +255,7 @@ const ChoresDayView: React.FC<ChoresDayViewProps> = ({ date, chores, profiles, o
       <CelebrationOverlay
         active={celebration.active}
         message={celebration.message}
-        duration={5800}
+        duration={15000}
         onDone={() => setCelebration({ active: false, message: '' })}
       />
 
