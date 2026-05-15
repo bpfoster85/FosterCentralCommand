@@ -65,7 +65,7 @@ const GoalsPage: React.FC = () => {
       <CelebrationOverlay
         active={celebration.active}
         message={celebration.message}
-        duration={4000}
+        duration={7000}
         onDone={() => setCelebration({ active: false, message: '' })}
       />
 

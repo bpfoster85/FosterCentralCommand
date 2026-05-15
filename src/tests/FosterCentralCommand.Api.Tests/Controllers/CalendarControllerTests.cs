@@ -61,5 +61,8 @@ public class CalendarControllerTests
             SyncCalled = true;
             return Task.CompletedTask;
         }
+
+        public Task<CalendarEventDto> CreateEventAsync(CreateCalendarEventDto dto)
+            => throw new NotImplementedException();
     }
 }

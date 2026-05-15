@@ -7,6 +7,9 @@ public class Profile
     [JsonPropertyName("id")]
     public string Id { get; set; } = Guid.NewGuid().ToString();
 
+    /// <summary>Family this profile belongs to. Stamped on Create from the request's FamilyContext.</summary>
+    public string FamilyId { get; set; } = string.Empty;
+
     public string Name { get; set; } = string.Empty;
 
     public string Email { get; set; } = string.Empty;

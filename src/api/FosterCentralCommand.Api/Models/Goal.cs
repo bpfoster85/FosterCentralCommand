@@ -7,6 +7,9 @@ public class Goal
     [JsonPropertyName("id")]
     public string Id { get; set; } = Guid.NewGuid().ToString();
 
+    /// <summary>Family this goal belongs to. Stamped on Create from the request's FamilyContext.</summary>
+    public string FamilyId { get; set; } = string.Empty;
+
     public string ProfileId { get; set; } = string.Empty;
 
     public string Title { get; set; } = string.Empty;

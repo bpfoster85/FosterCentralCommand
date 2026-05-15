@@ -349,7 +349,11 @@ const AdminPage: React.FC = () => {
         </div>
       </div>
 
-      <Toast ref={toast} />
+      <Toast
+        ref={toast}
+        position="top-right"
+        style={{ top: 'calc(5.5rem + env(safe-area-inset-top))' }}
+      />
       <ConfirmDialog />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>

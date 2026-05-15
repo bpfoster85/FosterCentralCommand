@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { Button } from 'primereact/button'
 import { Dialog } from 'primereact/dialog'
 import { InputText } from 'primereact/inputtext'
-import { InputNumber } from 'primereact/inputnumber'
 import { ProgressBar } from 'primereact/progressbar'
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog'
 import { useProfiles } from '../hooks/useProfiles'
@@ -11,7 +10,6 @@ import ProfileCard from '../components/profiles/ProfileCard'
 import type { Profile } from '../types'
 
 const PROFILE_COLORS = ['#4CAF50', '#2196F3', '#F44336', '#FF9800', '#9C27B0', '#00BCD4', '#E91E63', '#795548']
-const EMOJI_PRESETS = ['🎮', '🎁', '🏖️', '🍕', '🎬', '🚲', '📚', '🎨', '⚽', '🛹', '🎤', '🌴', '⭐']
 
 const ProfilesPage: React.FC = () => {
   const { profiles, loading, createProfile, updateProfile, deleteProfile } = useProfiles()
@@ -20,30 +18,25 @@ const ProfilesPage: React.FC = () => {
   const [form, setForm] = useState({ name: '', email: '', color: PROFILE_COLORS[0] })
 
   // Goals for the profile currently being edited
-  const { goals, createGoal, deleteGoal } = useGoals(editingProfile?.id)
-  const [goalForm, setGoalForm] = useState({ title: '', emoji: '⭐', starTarget: 10 })
+  const { goals, deleteGoal } = useGoals(editingProfile?.id)
 
   const resetForm = () => setForm({ name: '', email: '', color: PROFILE_COLORS[0] })
-  const resetGoalForm = () => setGoalForm({ title: '', emoji: '⭐', starTarget: 10 })
 
   const closeDialog = () => {
     setDialogVisible(false)
     setEditingProfile(null)
     resetForm()
-    resetGoalForm()
   }
 
   const openCreate = () => {
     setEditingProfile(null)
     resetForm()
-    resetGoalForm()
     setDialogVisible(true)
   }
 
   const openEdit = (profile: Profile) => {
     setEditingProfile(profile)
     setForm({ name: profile.name, email: profile.email, color: profile.color })
-    resetGoalForm()
     setDialogVisible(true)
   }
 
@@ -65,17 +58,6 @@ const ProfilesPage: React.FC = () => {
       acceptClassName: 'p-button-danger',
       accept: () => deleteProfile(profile.id)
     })
-  }
-
-  const handleCreateGoal = async () => {
-    if (!editingProfile || !goalForm.title.trim()) return
-    await createGoal({
-      profileId: editingProfile.id,
-      title: goalForm.title.trim(),
-      emoji: goalForm.emoji || '⭐',
-      starTarget: goalForm.starTarget,
-    })
-    resetGoalForm()
   }
 
   const handleDeleteGoal = (goalId: string, title: string) => {
@@ -207,85 +189,6 @@ const ProfilesPage: React.FC = () => {
                   </div>
                 </div>
               )}
-
-              {/* New goal form */}
-              <div
-                style={{
-                  border: '1px solid var(--sky-border, #e2e8f0)',
-                  borderRadius: '14px',
-                  padding: '1rem',
-                }}
-              >
-                <div style={{ fontWeight: 600, marginBottom: '0.75rem', fontSize: '0.95rem' }}>
-                  Add New Goal
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 500, fontSize: '0.9rem' }}>
-                      Goal Name *
-                    </label>
-                    <InputText
-                      value={goalForm.title}
-                      onChange={e => setGoalForm(f => ({ ...f, title: e.target.value }))}
-                      className="w-full"
-                      placeholder="e.g. New Video Game"
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 500, fontSize: '0.9rem' }}>
-                      Emoji
-                    </label>
-                    <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginBottom: '0.4rem' }}>
-                      {EMOJI_PRESETS.map(e => (
-                        <button
-                          key={e}
-                          type="button"
-                          onClick={() => setGoalForm(f => ({ ...f, emoji: e }))}
-                          style={{
-                            fontSize: '1.35rem',
-                            background: goalForm.emoji === e ? 'var(--sky-surface-soft, #f3f4f6)' : 'none',
-                            border: goalForm.emoji === e ? '2px solid var(--primary-color)' : '2px solid transparent',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            padding: '0.15rem 0.25rem',
-                            lineHeight: 1,
-                          }}
-                          aria-label={`Use ${e} emoji`}
-                        >
-                          {e}
-                        </button>
-                      ))}
-                    </div>
-                    <InputText
-                      value={goalForm.emoji}
-                      onChange={e => setGoalForm(f => ({ ...f, emoji: e.target.value }))}
-                      className="w-full"
-                      placeholder="Or type any emoji"
-                      maxLength={8}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 500, fontSize: '0.9rem' }}>
-                      Stars Required <i className="pi pi-star-fill" style={{ color: 'var(--sky-amber)', fontSize: '0.85rem' }} />
-                    </label>
-                    <InputNumber
-                      value={goalForm.starTarget}
-                      onValueChange={e => setGoalForm(f => ({ ...f, starTarget: e.value ?? 1 }))}
-                      min={1}
-                      max={9999}
-                      showButtons
-                      className="w-full"
-                    />
-                  </div>
-                  <Button
-                    label="Add Goal"
-                    icon="pi pi-plus"
-                    onClick={handleCreateGoal}
-                    disabled={!goalForm.title.trim() || goalForm.starTarget < 1}
-                    className="p-button-outlined"
-                  />
-                </div>
-              </div>
             </div>
           )}
         </div>

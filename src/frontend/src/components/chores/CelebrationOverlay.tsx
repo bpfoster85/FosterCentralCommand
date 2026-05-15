@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 
 interface Particle {
   x: number
@@ -120,7 +121,7 @@ interface CelebrationOverlayProps {
 const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
   active,
   message,
-  duration = 3500,
+  duration = 6500,
   onDone,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -251,7 +252,11 @@ const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
 
   if (!active) return null
 
-  return (
+  // Portal to document.body so position: fixed isn't trapped by any
+  // transformed ancestor (e.g. react-grid-layout's widget containers on the
+  // dashboard) — without this, the overlay would be clipped to the widget
+  // instead of covering the whole viewport.
+  return createPortal(
     <div
       style={{
         position: 'fixed',
@@ -318,7 +323,8 @@ const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </div>,
+    document.body,
   )
 }
 
