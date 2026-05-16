@@ -134,7 +134,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
   }
 
   // Match an event to profiles by attendee email first, then title keyword.
-  const getEventProfileMatch = useMemo(() => {
+  const getEventProfileMatches = useMemo(() => {
     const titlePatterns = profiles
       .filter(p => p.name)
       .map(p => ({
@@ -200,23 +200,23 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
       // and starts before the window end.
       if (evEnd < rangeStart || evStart >= rangeEnd) continue
       total += 1
-      const { matchedProfileIds } = getEventProfileMatch(e)
+      const { matchedProfileIds } = getEventProfileMatches(e)
       for (const profileId of matchedProfileIds) {
         counts[profileId] = (counts[profileId] || 0) + 1
       }
     }
     return { countsByProfileId: counts, totalCount: total }
-  }, [events, getEventProfileMatch, visibleRange])
+  }, [events, getEventProfileMatches, visibleRange])
 
   // Apply selected-profile filter client-side (multi-select; empty = show all).
   const visibleEvents = useMemo(
     () => (selectedProfileIds.length === 0
       ? events
       : events.filter(e => {
-          const { matchedProfileIds } = getEventProfileMatch(e)
+          const { matchedProfileIds } = getEventProfileMatches(e)
           return matchedProfileIds.some(profileId => selectedProfileIds.includes(profileId))
         })),
-    [events, selectedProfileIds, getEventProfileMatch]
+    [events, selectedProfileIds, getEventProfileMatches]
   )
 
   // Bucket events by day for the current week (only used in week view).
@@ -247,7 +247,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
   }, [visibleEvents, weekDays])
 
   const calendarEvents = visibleEvents.map(e => {
-    const { primaryProfile: matchedProfile } = getEventProfileMatch(e)
+    const { primaryProfile: matchedProfile } = getEventProfileMatches(e)
     return {
       id: e.id,
       title: e.title,
@@ -269,7 +269,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
 
   // Open the event detail dialog using the same shape FullCalendar provides.
   const openEventDetail = (e: CalendarEvent) => {
-    const { primaryProfile: matchedProfile } = getEventProfileMatch(e)
+    const { primaryProfile: matchedProfile } = getEventProfileMatches(e)
     setEventDetail({
       title: e.title,
       start: e.start,
@@ -485,7 +485,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
                     <div className="sky-day-tile-empty">No events</div>
                   ) : (
                     dayEvents.map(e => {
-                      const { primaryProfile: matched } = getEventProfileMatch(e)
+                      const { primaryProfile: matched } = getEventProfileMatches(e)
                       const color = matched?.color || 'var(--sky-lagoon-deep)'
                       return (
                         <button
