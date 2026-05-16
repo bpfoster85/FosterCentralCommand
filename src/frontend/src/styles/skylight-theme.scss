@@ -157,6 +157,28 @@ h1, h2, h3, h4, h5, h6 {
     color: $sky-text-secondary;
     line-height: 1;
   }
+
+  &-weather {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.2rem;
+    margin-left: 0.25rem;
+    padding-left: 0.5rem;
+    border-left: 1px solid $sky-border-strong;
+    line-height: 1;
+  }
+
+  &-weather-emoji {
+    font-size: 0.9rem;
+    line-height: 1;
+  }
+
+  &-weather-temp {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: $sky-text-primary;
+    line-height: 1;
+  }
 }
 
 .sky-nav-tab {
@@ -1245,16 +1267,16 @@ textarea.p-inputtext,
 // Event detail dialog — clickable location chip
 // =============================================================================
 .sky-event-detail-body {
-  padding: 1.5rem 1.75rem;
+  padding: 1.75rem 2rem;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.5rem;
 }
 
 .sky-event-detail-main {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.5rem;
 }
 
 .sky-event-map-panel {
@@ -1262,13 +1284,13 @@ textarea.p-inputtext,
   border-radius: $sky-radius-sm;
   overflow: hidden;
   background: $sky-surface-soft;
-  min-height: 280px;
+  min-height: 340px;
 }
 
 .sky-event-map-frame {
   width: 100%;
   height: 100%;
-  min-height: 280px;
+  min-height: 340px;
   border: 0;
   touch-action: pinch-zoom;
 }
@@ -1301,21 +1323,21 @@ textarea.p-inputtext,
   .sky-event-detail-body.with-map {
     flex-direction: row;
     align-items: stretch;
-    gap: 1.5rem;
+    gap: 2rem;
   }
 
   .sky-event-detail-body.with-map .sky-event-detail-main {
-    flex: 1 1 55%;
+    flex: 1 1 45%;
     min-width: 0;
   }
 
   .sky-event-detail-body.with-map .sky-event-map-panel {
-    flex: 1 1 45%;
-    min-height: 420px;
+    flex: 1 1 55%;
+    min-height: 520px;
   }
 
   .sky-event-detail-body.with-map .sky-event-map-frame {
-    min-height: 420px;
+    min-height: 520px;
   }
 }
 
@@ -1677,4 +1699,67 @@ textarea.p-inputtext,
   0%   { transform: scale(0.5); opacity: 0; }
   70%  { transform: scale(1.05); opacity: 1; }
   100% { transform: scale(1);    opacity: 1; }
+}
+
+
+// =============================================================================
+// 4K / Large-display scaling — bump up calendar event fonts & week tile sizes
+// so the content is comfortable to read at ≥2560 px widths.
+// =============================================================================
+@media (min-width: 2560px) {
+  html {
+    font-size: 20px; // base scale-up; rem values follow automatically
+  }
+
+  // Week-view day tiles: bigger date numbers and day names
+  .sky-day-tile-name {
+    font-size: 0.85rem;
+  }
+
+  .sky-day-tile-num {
+    font-size: 1.5rem;
+  }
+
+  // Event chips inside each tile
+  .sky-day-event-time {
+    font-size: 1rem;
+  }
+
+  .sky-day-event-title {
+    font-size: 1.2rem;
+  }
+
+  .sky-day-event-meta {
+    font-size: 1rem;
+
+    .pi {
+      font-size: 1rem;
+    }
+  }
+
+  // Control tile (week navigation)
+  .sky-control-tile-range {
+    font-size: 1rem;
+  }
+
+  // Profile pills
+  .sky-profile-pill {
+    font-size: 1.1rem;
+    padding: 0.55rem 1rem;
+  }
+
+  // Nav clock
+  .sky-nav-clock-time {
+    font-size: 1.3rem;
+  }
+
+  .sky-nav-clock-zone {
+    font-size: 0.85rem;
+  }
+
+  // Nav tabs
+  .sky-nav-tab {
+    font-size: 1.15rem;
+    padding: 0.75rem 1.5rem;
+  }
 }

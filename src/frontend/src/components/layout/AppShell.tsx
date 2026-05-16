@@ -45,10 +45,67 @@ const useMstClock = () => {
   return time
 }
 
+// WMO Weather interpretation codes → emoji + short label.
+function wmoToDisplay(code: number): { emoji: string; label: string } {
+  if (code === 0) return { emoji: '☀️', label: 'Clear' }
+  if (code <= 2) return { emoji: '⛅', label: 'Partly cloudy' }
+  if (code === 3) return { emoji: '☁️', label: 'Overcast' }
+  if (code <= 49) return { emoji: '🌫️', label: 'Foggy' }
+  if (code <= 59) return { emoji: '🌦️', label: 'Drizzle' }
+  if (code <= 69) return { emoji: '🌧️', label: 'Rain' }
+  if (code <= 79) return { emoji: '❄️', label: 'Snow' }
+  if (code <= 84) return { emoji: '🌧️', label: 'Showers' }
+  if (code <= 86) return { emoji: '🌨️', label: 'Snow showers' }
+  if (code <= 99) return { emoji: '⛈️', label: 'Thunderstorm' }
+  return { emoji: '🌡️', label: 'Unknown' }
+}
+
+interface WeatherData {
+  tempF: number
+  emoji: string
+  label: string
+}
+
+// South Jordan, Utah coordinates
+const LAT = 40.5621
+const LON = -111.9296
+const WEATHER_URL =
+  `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
+  `&current=temperature_2m,weather_code&temperature_unit=fahrenheit&timezone=America%2FDenver`
+
+const useWeather = () => {
+  const [weather, setWeather] = useState<WeatherData | null>(null)
+  const fetchRef = useRef<(() => void) | undefined>(undefined)
+
+  fetchRef.current = async () => {
+    try {
+      const resp = await fetch(WEATHER_URL)
+      if (!resp.ok) return
+      const json = await resp.json()
+      const tempF: number = json.current?.temperature_2m ?? 0
+      const code: number = json.current?.weather_code ?? 0
+      const { emoji, label } = wmoToDisplay(code)
+      setWeather({ tempF: Math.round(tempF), emoji, label })
+    } catch {
+      // silently ignore network errors
+    }
+  }
+
+  useEffect(() => {
+    fetchRef.current?.()
+    // Re-fetch every 15 minutes
+    const id = window.setInterval(() => fetchRef.current?.(), 15 * 60 * 1000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  return weather
+}
+
 const AppShell: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const time = useMstClock()
+  const weather = useWeather()
   const familyName = getFamilyName()
   const isAdmin = Boolean(getAdminKey())
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -117,6 +174,12 @@ const AppShell: React.FC = () => {
           <div className="sky-nav-clock" aria-label={`Current time, Mountain Time: ${time}`}>
             <span className="sky-nav-clock-time">{time.replace(' ', '')}</span>
             <span className="sky-nav-clock-zone">MST</span>
+            {weather && (
+              <span className="sky-nav-clock-weather" aria-label={`Weather: ${weather.label}, ${weather.tempF}°F`}>
+                <span className="sky-nav-clock-weather-emoji" aria-hidden="true">{weather.emoji}</span>
+                <span className="sky-nav-clock-weather-temp">{weather.tempF}°F</span>
+              </span>
+            )}
           </div>
         )}
 

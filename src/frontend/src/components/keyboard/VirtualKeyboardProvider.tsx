@@ -186,10 +186,47 @@ export function VirtualKeyboardProvider({ children }: Props) {
   useEffect(() => {
     if (!target) return
     keyboardRef.current?.setInput(target.value ?? '')
-    const id = window.requestAnimationFrame(() => {
-      target.scrollIntoView({ block: 'center', behavior: 'smooth' })
+
+    // Track both animation frame IDs so we can cancel them on cleanup.
+    let raf2: number | undefined
+
+    // Wait two frames: one for the keyboard overlay to mount and measure its
+    // height, another for the layout to settle after any scroll.
+    const raf1 = window.requestAnimationFrame(() => {
+      raf2 = window.requestAnimationFrame(() => {
+        const overlayEl = document.querySelector<HTMLElement>('.virtual-keyboard-overlay')
+        const keyboardHeight = overlayEl ? overlayEl.getBoundingClientRect().height : 300
+        const MARGIN = 20 // gap between input bottom and keyboard top
+
+        const rect = target.getBoundingClientRect()
+        const visibleBottom = window.innerHeight - keyboardHeight - MARGIN
+
+        if (rect.bottom > visibleBottom) {
+          const delta = rect.bottom - visibleBottom
+
+          // Walk up the DOM to find the nearest scrollable container.
+          let parent = target.parentElement
+          let scrolled = false
+          while (parent && parent !== document.body) {
+            const { overflowY } = window.getComputedStyle(parent)
+            if (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') {
+              parent.scrollTop += delta
+              scrolled = true
+              break
+            }
+            parent = parent.parentElement
+          }
+          if (!scrolled) {
+            window.scrollBy({ top: delta, behavior: 'smooth' })
+          }
+        }
+      })
     })
-    return () => window.cancelAnimationFrame(id)
+
+    return () => {
+      window.cancelAnimationFrame(raf1)
+      if (raf2 !== undefined) window.cancelAnimationFrame(raf2)
+    }
   }, [target])
 
   // Add a body class while visible so global styles can shift focused content

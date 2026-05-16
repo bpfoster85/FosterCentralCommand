@@ -612,7 +612,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
         onHide={() => setEventDetail(null)}
         style={{
           width: '95vw',
-          maxWidth: eventDetailHasLocation ? '1120px' : '640px',
+          maxWidth: eventDetailHasLocation ? '1400px' : '800px',
         }}
         showHeader={false}
         contentStyle={{ padding: 0 }}
