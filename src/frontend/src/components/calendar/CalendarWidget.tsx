@@ -784,6 +784,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
                       className="sky-event-map-frame"
                       loading="lazy"
                       referrerPolicy="no-referrer-when-downgrade"
+                      sandbox="allow-scripts allow-same-origin"
                       allowFullScreen
                     />
                   </aside>

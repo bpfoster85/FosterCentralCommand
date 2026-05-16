@@ -1295,16 +1295,6 @@ textarea.p-inputtext,
     font-size: 1.15rem;
     flex-shrink: 0;
   }
-
-  &:hover {
-    background: rgba($sky-lagoon, 0.18);
-    border-color: rgba($sky-lagoon, 0.45);
-  }
-
-  &:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba($sky-lagoon, 0.3);
-  }
 }
 
 @media (min-width: 900px) {
