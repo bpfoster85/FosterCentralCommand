@@ -133,18 +133,45 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
     )
   }
 
-  // Match event titles against profile names (case-insensitive, whole-word).
-  const findProfileMatch = useMemo(() => {
-    const patterns = profiles
+  // Match an event to profiles by attendee email first, then title keyword.
+  const matchEventToProfiles = useMemo(() => {
+    const titlePatterns = profiles
       .filter(p => p.name)
       .map(p => ({
         profile: p,
         regex: new RegExp(`\\b${p.name.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`),
       }))
-    return (title: string): Profile | undefined => {
-      if (!title) return undefined
-      const lower = title.toLowerCase()
-      return patterns.find(({ regex }) => regex.test(lower))?.profile
+    const profilesByEmail = new Map(
+      profiles
+        .filter(p => p.email)
+        .map(p => [p.email.trim().toLowerCase(), p] as const)
+    )
+    return (event: Pick<CalendarEvent, 'title' | 'attendeeEmails'>): { matchedProfileIds: string[]; primaryProfile?: Profile } => {
+      const matchedProfileIds = new Set<string>()
+      const matchedProfiles: Profile[] = []
+
+      for (const email of event.attendeeEmails ?? []) {
+        const normalizedEmail = email.trim().toLowerCase()
+        const profile = profilesByEmail.get(normalizedEmail)
+        if (profile && !matchedProfileIds.has(profile.id)) {
+          matchedProfileIds.add(profile.id)
+          matchedProfiles.push(profile)
+        }
+      }
+
+      if (event.title) {
+        const lowerTitle = event.title.toLowerCase()
+        const titleMatch = titlePatterns.find(({ regex }) => regex.test(lowerTitle))?.profile
+        if (titleMatch && !matchedProfileIds.has(titleMatch.id)) {
+          matchedProfileIds.add(titleMatch.id)
+          matchedProfiles.push(titleMatch)
+        }
+      }
+
+      return {
+        matchedProfileIds: Array.from(matchedProfileIds),
+        primaryProfile: matchedProfiles[0],
+      }
     }
   }, [profiles])
 
@@ -173,21 +200,23 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
       // and starts before the window end.
       if (evEnd < rangeStart || evStart >= rangeEnd) continue
       total += 1
-      const matched = findProfileMatch(e.title)
-      if (matched) counts[matched.id] = (counts[matched.id] || 0) + 1
+      const { matchedProfileIds } = matchEventToProfiles(e)
+      for (const profileId of matchedProfileIds) {
+        counts[profileId] = (counts[profileId] || 0) + 1
+      }
     }
     return { countsByProfileId: counts, totalCount: total }
-  }, [events, findProfileMatch, visibleRange])
+  }, [events, matchEventToProfiles, visibleRange])
 
   // Apply selected-profile filter client-side (multi-select; empty = show all).
   const visibleEvents = useMemo(
     () => (selectedProfileIds.length === 0
       ? events
       : events.filter(e => {
-          const matched = findProfileMatch(e.title)
-          return matched ? selectedProfileIds.includes(matched.id) : false
+          const { matchedProfileIds } = matchEventToProfiles(e)
+          return matchedProfileIds.some(profileId => selectedProfileIds.includes(profileId))
         })),
-    [events, selectedProfileIds, findProfileMatch]
+    [events, selectedProfileIds, matchEventToProfiles]
   )
 
   // Bucket events by day for the current week (only used in week view).
@@ -218,7 +247,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
   }, [visibleEvents, weekDays])
 
   const calendarEvents = visibleEvents.map(e => {
-    const matchedProfile = findProfileMatch(e.title)
+    const { primaryProfile: matchedProfile } = matchEventToProfiles(e)
     return {
       id: e.id,
       title: e.title,
@@ -240,7 +269,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
 
   // Open the event detail dialog using the same shape FullCalendar provides.
   const openEventDetail = (e: CalendarEvent) => {
-    const matchedProfile = findProfileMatch(e.title)
+    const { primaryProfile: matchedProfile } = matchEventToProfiles(e)
     setEventDetail({
       title: e.title,
       start: e.start,
@@ -353,6 +382,12 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
     }
   }
 
+  const eventDetailLocation =
+    typeof eventDetail?.extendedProps?.location === 'string'
+      ? eventDetail.extendedProps.location.trim()
+      : ''
+  const eventDetailHasLocation = eventDetailLocation.length > 0
+
   return (
     <div ref={swipeContainerRef} style={{ height: '100%', display: 'flex', flexDirection: 'column', touchAction: 'pan-y' }}>
       {/* Header — profile filter + actions on a single row */}
@@ -456,7 +491,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
                     <div className="sky-day-tile-empty">No events</div>
                   ) : (
                     dayEvents.map(e => {
-                      const matched = findProfileMatch(e.title)
+                      const { primaryProfile: matched } = matchEventToProfiles(e)
                       const color = matched?.color || 'var(--sky-lagoon-deep)'
                       return (
                         <button
@@ -575,7 +610,10 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
       <Dialog
         visible={!!eventDetail}
         onHide={() => setEventDetail(null)}
-        style={{ width: '90vw', maxWidth: '640px' }}
+        style={{
+          width: '95vw',
+          maxWidth: eventDetailHasLocation ? '1120px' : '640px',
+        }}
         showHeader={false}
         contentStyle={{ padding: 0 }}
         dismissableMask
@@ -644,8 +682,8 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
               </div>
 
               {/* Body */}
-              <div style={{ padding: '1.5rem 1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                <div>
+              <div className={`sky-event-detail-body ${eventDetailHasLocation ? 'with-map' : ''}`}>
+                <div className="sky-event-detail-main">
                   <strong style={labelStyle}>When</strong>
                   {(() => {
                     const start = new Date(eventDetail.start)
@@ -701,50 +739,55 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
                       </>
                     )
                   })()}
-                </div>
-
-                {eventDetail.extendedProps.location && (
-                  <div>
-                    <strong style={labelStyle}>Location</strong>
-                    <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(eventDetail.extendedProps.location)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="sky-event-location"
-                      style={valueStyle}
-                    >
-                      <i className="pi pi-map-marker" />
-                      <span>{eventDetail.extendedProps.location}</span>
-                      <i className="pi pi-external-link sky-event-location-ext" />
-                    </a>
-                  </div>
-                )}
-
-                {eventDetail.extendedProps.description && (
-                  <div>
-                    <strong style={labelStyle}>Description</strong>
-                    <div
-                      style={{
-                        margin: '0.4rem 0 0 0',
-                        whiteSpace: 'pre-wrap',
-                        wordBreak: 'break-word',
-                        lineHeight: 1.55,
-                        fontSize: '1.2rem',
-                      }}
-                      dangerouslySetInnerHTML={{ __html: eventDetail.extendedProps.description }}
-                    />
-                  </div>
-                )}
-
-                {eventDetail.extendedProps.attendees?.length > 0 && (
-                  <div>
-                    <strong style={labelStyle}>Attendees</strong>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.5rem' }}>
-                      {eventDetail.extendedProps.attendees.map((email: string) => (
-                        <span key={email} className="sky-person-chip">{email}</span>
-                      ))}
+                  {eventDetailHasLocation && (
+                    <div>
+                      <strong style={labelStyle}>Location</strong>
+                      <div className="sky-event-location" style={valueStyle}>
+                        <i className="pi pi-map-marker" />
+                        <span>{eventDetailLocation}</span>
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {eventDetail.extendedProps.description && (
+                    <div>
+                      <strong style={labelStyle}>Description</strong>
+                      <div
+                        style={{
+                          margin: '0.4rem 0 0 0',
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                          lineHeight: 1.55,
+                          fontSize: '1.2rem',
+                        }}
+                        dangerouslySetInnerHTML={{ __html: eventDetail.extendedProps.description }}
+                      />
+                    </div>
+                  )}
+
+                  {eventDetail.extendedProps.attendees?.length > 0 && (
+                    <div>
+                      <strong style={labelStyle}>Attendees</strong>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.5rem' }}>
+                        {eventDetail.extendedProps.attendees.map((email: string) => (
+                          <span key={email} className="sky-person-chip">{email}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {eventDetailHasLocation && (
+                  <aside className="sky-event-map-panel" aria-label="Map preview">
+                    <iframe
+                      title="Event location map"
+                      src={`https://maps.google.com/maps?q=${encodeURIComponent(eventDetailLocation)}&output=embed`}
+                      className="sky-event-map-frame"
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      sandbox="allow-scripts allow-same-origin"
+                      allowFullScreen
+                    />
+                  </aside>
                 )}
               </div>
             </>

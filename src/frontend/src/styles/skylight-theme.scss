@@ -1244,6 +1244,35 @@ textarea.p-inputtext,
 // =============================================================================
 // Event detail dialog — clickable location chip
 // =============================================================================
+.sky-event-detail-body {
+  padding: 1.5rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.sky-event-detail-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.sky-event-map-panel {
+  border: 1px solid rgba($sky-lagoon, 0.25);
+  border-radius: $sky-radius-sm;
+  overflow: hidden;
+  background: $sky-surface-soft;
+  min-height: 280px;
+}
+
+.sky-event-map-frame {
+  width: 100%;
+  height: 100%;
+  min-height: 280px;
+  border: 0;
+  touch-action: pinch-zoom;
+}
+
 .sky-event-location {
   display: inline-flex;
   align-items: center;
@@ -1258,34 +1287,35 @@ textarea.p-inputtext,
   font-size: 0.9rem;
   font-weight: 500;
   line-height: 1.3;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease;
   word-break: break-word;
+  cursor: default;
 
   .pi-map-marker {
     font-size: 1.15rem;
     flex-shrink: 0;
   }
+}
 
-  .sky-event-location-ext {
-    font-size: 0.95rem;
-    opacity: 0.65;
-    flex-shrink: 0;
-    margin-left: auto;
+@media (min-width: 900px) {
+  .sky-event-detail-body.with-map {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 1.5rem;
   }
 
-  &:hover {
-    background: rgba($sky-lagoon, 0.18);
-    border-color: rgba($sky-lagoon, 0.45);
-    transform: translateY(-1px);
-
-    .sky-event-location-ext {
-      opacity: 1;
-    }
+  .sky-event-detail-body.with-map .sky-event-detail-main {
+    flex: 1 1 55%;
+    min-width: 0;
   }
 
-  &:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba($sky-lagoon, 0.3);
+  .sky-event-detail-body.with-map .sky-event-map-panel {
+    flex: 1 1 45%;
+    min-height: 420px;
+  }
+
+  .sky-event-detail-body.with-map .sky-event-map-frame {
+    min-height: 420px;
   }
 }
 
