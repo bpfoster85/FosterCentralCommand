@@ -1703,10 +1703,12 @@ textarea.p-inputtext,
 
 
 // =============================================================================
-// 4K / Large-display scaling — bump up calendar event fonts & week tile sizes
-// so the content is comfortable to read at ≥2560 px widths.
+// 2K+ display scaling — bump up calendar event fonts & week tile sizes
+// so the content is comfortable to read on 2K (2560×1440) and larger monitors.
+// Uses 1600 px as the CSS-pixel threshold so the rule fires even when the OS
+// applies 125–150 % display scaling (which shrinks logical CSS pixels).
 // =============================================================================
-@media (min-width: 2560px) {
+@media (min-width: 1600px) {
   html {
     font-size: 20px; // base scale-up; rem values follow automatically
   }
