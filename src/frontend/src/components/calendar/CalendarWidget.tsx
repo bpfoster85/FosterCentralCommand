@@ -382,6 +382,12 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
     }
   }
 
+  const eventDetailLocation =
+    typeof eventDetail?.extendedProps?.location === 'string'
+      ? eventDetail.extendedProps.location.trim()
+      : ''
+  const eventDetailHasLocation = eventDetailLocation.length > 0
+
   return (
     <div ref={swipeContainerRef} style={{ height: '100%', display: 'flex', flexDirection: 'column', touchAction: 'pan-y' }}>
       {/* Header — profile filter + actions on a single row */}
@@ -606,7 +612,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
         onHide={() => setEventDetail(null)}
         style={{
           width: '95vw',
-          maxWidth: eventDetail?.extendedProps?.location ? '1120px' : '640px',
+          maxWidth: eventDetailHasLocation ? '1120px' : '640px',
         }}
         showHeader={false}
         contentStyle={{ padding: 0 }}
@@ -676,7 +682,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
               </div>
 
               {/* Body */}
-              <div className={`sky-event-detail-body ${eventDetail.extendedProps.location ? 'with-map' : ''}`}>
+              <div className={`sky-event-detail-body ${eventDetailHasLocation ? 'with-map' : ''}`}>
                 <div className="sky-event-detail-main">
                   <strong style={labelStyle}>When</strong>
                   {(() => {
@@ -733,12 +739,12 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
                       </>
                     )
                   })()}
-                  {eventDetail.extendedProps.location && (
+                  {eventDetailHasLocation && (
                     <div>
                       <strong style={labelStyle}>Location</strong>
                       <div className="sky-event-location" style={valueStyle}>
                         <i className="pi pi-map-marker" />
-                        <span>{eventDetail.extendedProps.location}</span>
+                        <span>{eventDetailLocation}</span>
                       </div>
                     </div>
                   )}
@@ -770,11 +776,11 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
                     </div>
                   )}
                 </div>
-                {eventDetail.extendedProps.location && (
+                {eventDetailHasLocation && (
                   <aside className="sky-event-map-panel" aria-label="Map preview">
                     <iframe
                       title={`Map for ${eventDetail.title}`}
-                      src={`https://maps.google.com/maps?q=${encodeURIComponent(eventDetail.extendedProps.location)}&output=embed`}
+                      src={`https://maps.google.com/maps?q=${encodeURIComponent(eventDetailLocation)}&output=embed`}
                       className="sky-event-map-frame"
                       loading="lazy"
                       referrerPolicy="no-referrer-when-downgrade"
