@@ -69,6 +69,7 @@ interface WeatherData {
 // South Jordan, Utah coordinates
 const LAT = 40.5621
 const LON = -111.9296
+const WEATHER_REFRESH_MS = 15 * 60 * 1000 // 15 minutes
 const WEATHER_URL =
   `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}` +
   `&current=temperature_2m,weather_code&temperature_unit=fahrenheit&timezone=America%2FDenver`
@@ -94,7 +95,7 @@ const useWeather = () => {
   useEffect(() => {
     fetchRef.current?.()
     // Re-fetch every 15 minutes
-    const id = window.setInterval(() => fetchRef.current?.(), 15 * 60 * 1000)
+    const id = window.setInterval(() => fetchRef.current?.(), WEATHER_REFRESH_MS)
     return () => window.clearInterval(id)
   }, [])
 

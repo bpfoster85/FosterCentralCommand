@@ -190,16 +190,18 @@ export function VirtualKeyboardProvider({ children }: Props) {
     // Track both animation frame IDs so we can cancel them on cleanup.
     let raf2: number | undefined
 
+    const DEFAULT_KEYBOARD_HEIGHT = 300 // fallback if overlay not yet measured
+    const INPUT_KEYBOARD_GAP = 20 // space between input bottom and keyboard top
+
     // Wait two frames: one for the keyboard overlay to mount and measure its
     // height, another for the layout to settle after any scroll.
     const raf1 = window.requestAnimationFrame(() => {
       raf2 = window.requestAnimationFrame(() => {
         const overlayEl = document.querySelector<HTMLElement>('.virtual-keyboard-overlay')
-        const keyboardHeight = overlayEl ? overlayEl.getBoundingClientRect().height : 300
-        const MARGIN = 20 // gap between input bottom and keyboard top
+        const keyboardHeight = overlayEl ? overlayEl.getBoundingClientRect().height : DEFAULT_KEYBOARD_HEIGHT
 
         const rect = target.getBoundingClientRect()
-        const visibleBottom = window.innerHeight - keyboardHeight - MARGIN
+        const visibleBottom = window.innerHeight - keyboardHeight - INPUT_KEYBOARD_GAP
 
         if (rect.bottom > visibleBottom) {
           const delta = rect.bottom - visibleBottom
