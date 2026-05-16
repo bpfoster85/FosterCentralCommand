@@ -2,26 +2,31 @@ import { useState, useEffect, useCallback } from 'react'
 import type { Chore } from '../types'
 import * as choresApi from '../api/chores'
 import type { ChoreCreatePayload, ChoreUpdatePayload } from '../api/chores'
+import { usePolling } from './usePolling'
+
+const POLL_INTERVAL_MS = 60_000
 
 export const useChores = (profileId?: string) => {
   const [chores, setChores] = useState<Chore[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchChores = useCallback(async () => {
+  const fetchChores = useCallback(async (silent: boolean = false) => {
     try {
-      setLoading(true)
+      if (!silent) setLoading(true)
       const data = await choresApi.getChores(profileId)
       setChores(data)
       setError(null)
     } catch {
-      setError('Failed to load chores')
+      if (!silent) setError('Failed to load chores')
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [profileId])
 
   useEffect(() => { fetchChores() }, [fetchChores])
+
+  usePolling(() => fetchChores(true), POLL_INTERVAL_MS)
 
   const createChore = async (data: ChoreCreatePayload) => {
     const chore = await choresApi.createChore(data)

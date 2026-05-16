@@ -1,26 +1,31 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { Goal } from '../types'
 import * as goalsApi from '../api/goals'
+import { usePolling } from './usePolling'
+
+const POLL_INTERVAL_MS = 60_000
 
 export const useGoals = (profileId?: string) => {
   const [goals, setGoals] = useState<Goal[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchGoals = useCallback(async () => {
+  const fetchGoals = useCallback(async (silent: boolean = false) => {
     try {
-      setLoading(true)
+      if (!silent) setLoading(true)
       const data = await goalsApi.getGoals(profileId)
       setGoals(data)
       setError(null)
     } catch {
-      setError('Failed to load goals')
+      if (!silent) setError('Failed to load goals')
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [profileId])
 
   useEffect(() => { fetchGoals() }, [fetchGoals])
+
+  usePolling(() => fetchGoals(true), POLL_INTERVAL_MS)
 
   const createGoal = async (data: Omit<Goal, 'id' | 'createdAt' | 'updatedAt' | 'starsApplied' | 'isAchieved'>) => {
     const goal = await goalsApi.createGoal(data)

@@ -1,15 +1,18 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { CalendarEvent } from '../types'
 import * as calendarApi from '../api/calendar'
+import { usePolling } from './usePolling'
+
+const POLL_INTERVAL_MS = 60_000
 
 export const useCalendar = (filterEmails?: string[]) => {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchEvents = useCallback(async (start?: string, end?: string) => {
+  const fetchEvents = useCallback(async (start?: string, end?: string, silent: boolean = false) => {
     try {
-      setLoading(true)
+      if (!silent) setLoading(true)
       // Default window: 2 weeks back through 2 months forward. This matches
       // the backend sync window so the cache covers the whole range and the
       // UI can navigate without extra network calls.
@@ -25,13 +28,15 @@ export const useCalendar = (filterEmails?: string[]) => {
       setEvents(data)
       setError(null)
     } catch (err) {
-      setError('Failed to load calendar events')
+      if (!silent) setError('Failed to load calendar events')
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [filterEmails])
 
   useEffect(() => { fetchEvents() }, [fetchEvents])
+
+  usePolling(() => fetchEvents(undefined, undefined, true), POLL_INTERVAL_MS)
 
   const syncCalendar = async () => {
     await calendarApi.syncCalendar()

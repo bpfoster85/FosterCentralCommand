@@ -1,26 +1,31 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { Profile } from '../types'
 import * as profilesApi from '../api/profiles'
+import { usePolling } from './usePolling'
+
+const POLL_INTERVAL_MS = 60_000
 
 export const useProfiles = () => {
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchProfiles = useCallback(async () => {
+  const fetchProfiles = useCallback(async (silent: boolean = false) => {
     try {
-      setLoading(true)
+      if (!silent) setLoading(true)
       const data = await profilesApi.getProfiles()
       setProfiles(data)
       setError(null)
     } catch {
-      setError('Failed to load profiles')
+      if (!silent) setError('Failed to load profiles')
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [])
 
   useEffect(() => { fetchProfiles() }, [fetchProfiles])
+
+  usePolling(() => fetchProfiles(true), POLL_INTERVAL_MS)
 
   const createProfile = async (data: Omit<Profile, 'id' | 'createdAt' | 'updatedAt' | 'totalStars'>) => {
     const profile = await profilesApi.createProfile(data)

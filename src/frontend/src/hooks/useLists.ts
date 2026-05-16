@@ -1,26 +1,31 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { ShoppingList, ListItem } from '../types'
 import * as listsApi from '../api/lists'
+import { usePolling } from './usePolling'
+
+const POLL_INTERVAL_MS = 60_000
 
 export const useLists = () => {
   const [lists, setLists] = useState<ShoppingList[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchLists = useCallback(async () => {
+  const fetchLists = useCallback(async (silent: boolean = false) => {
     try {
-      setLoading(true)
+      if (!silent) setLoading(true)
       const data = await listsApi.getLists()
       setLists(data)
       setError(null)
     } catch (err) {
-      setError('Failed to load lists')
+      if (!silent) setError('Failed to load lists')
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [])
 
   useEffect(() => { fetchLists() }, [fetchLists])
+
+  usePolling(() => fetchLists(true), POLL_INTERVAL_MS)
 
   const createList = async (data: Omit<ShoppingList, 'id' | 'createdAt' | 'updatedAt' | 'itemCount' | 'checkedCount'>) => {
     const list = await listsApi.createList(data)
@@ -52,18 +57,20 @@ export const useListItems = (listId: string | null) => {
   const [items, setItems] = useState<ListItem[]>([])
   const [loading, setLoading] = useState(false)
 
-  const fetchItems = useCallback(async () => {
+  const fetchItems = useCallback(async (silent: boolean = false) => {
     if (!listId) return
     try {
-      setLoading(true)
+      if (!silent) setLoading(true)
       const data = await listsApi.getListItems(listId)
       setItems(data)
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [listId])
 
   useEffect(() => { fetchItems() }, [fetchItems])
+
+  usePolling(() => fetchItems(true), POLL_INTERVAL_MS, listId !== null)
 
   const createItem = async (data: Omit<ListItem, 'id' | 'listId' | 'createdAt' | 'updatedAt'>) => {
     if (!listId) return
