@@ -8,20 +8,17 @@ import { useProfiles } from '../hooks/useProfiles'
 import { useGoals } from '../hooks/useGoals'
 import GoalCard from '../components/chores/GoalCard'
 import CelebrationOverlay from '../components/chores/CelebrationOverlay'
-import type { Goal } from '../types'
+import type { Goal, Profile } from '../types'
 
 const GoalsPage: React.FC = () => {
   const { profiles, loading: profilesLoading, refetch: refetchProfiles } = useProfiles()
-  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
 
-  const selectedProfile = profiles.find(p => p.id === selectedProfileId) ?? null
+  // Load all goals (no profileId filter) so we can group by profile on screen.
+  const { goals, loading: goalsLoading, deleteGoal, spendStars, winGoal, refetch: refetchGoals } = useGoals()
 
-  const { goals, loading: goalsLoading, deleteGoal, spendStars, winGoal, refetch: refetchGoals } = useGoals(
-    selectedProfileId ?? undefined,
-  )
-
-  // Spend stars dialog
+  // Spend stars dialog — tracks which goal and which profile's stars to use.
   const [spendDialogGoal, setSpendDialogGoal] = useState<Goal | null>(null)
+  const [spendDialogProfile, setSpendDialogProfile] = useState<Profile | null>(null)
   const [spendAmount, setSpendAmount] = useState<number>(1)
 
   // Celebration
@@ -37,16 +34,18 @@ const GoalsPage: React.FC = () => {
     })
   }
 
-  const handleOpenSpend = (goal: Goal) => {
+  const handleOpenSpend = (goal: Goal, profile: Profile) => {
     setSpendDialogGoal(goal)
+    setSpendDialogProfile(profile)
     setSpendAmount(1)
   }
 
   const handleSpendStars = async () => {
-    if (!spendDialogGoal || !selectedProfile || spendAmount < 1) return
-    await spendStars(spendDialogGoal.id, selectedProfile.id, spendAmount)
+    if (!spendDialogGoal || !spendDialogProfile || spendAmount < 1) return
+    await spendStars(spendDialogGoal.id, spendDialogProfile.id, spendAmount)
     refetchProfiles()
     setSpendDialogGoal(null)
+    setSpendDialogProfile(null)
     setCelebration({ active: true, message: `${spendAmount} ⭐ applied to "${spendDialogGoal.title}"!` })
   }
 
@@ -55,8 +54,6 @@ const GoalsPage: React.FC = () => {
     refetchGoals()
     setCelebration({ active: true, message: `🏆 ${goal.title} — Goal Achieved! Amazing job!` })
   }
-
-  const profileGoals = goals.filter(g => !selectedProfileId || g.profileId === selectedProfileId)
 
   return (
     <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '1rem' }}>
@@ -69,8 +66,7 @@ const GoalsPage: React.FC = () => {
         onDone={() => setCelebration({ active: false, message: '' })}
       />
 
-      {/* Header + profile selector */}
-      {profilesLoading ? (
+      {profilesLoading || goalsLoading ? (
         <ProgressBar mode="indeterminate" style={{ height: '4px', marginBottom: '1rem' }} />
       ) : profiles.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--sky-text-secondary)' }}>
@@ -78,142 +74,141 @@ const GoalsPage: React.FC = () => {
           <p>No profiles yet. Add a family member first.</p>
         </div>
       ) : (
-        <>
+        <div className="scroll-container" style={{ flex: 1 }}>
+          {/* Goals grouped by profile — mirroring the chores layout */}
           <div
-            style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}
-            role="group"
-            aria-label="Select profile"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${Math.min(profiles.length, 3)}, minmax(280px, 1fr))`,
+              gap: '1.5rem',
+              alignItems: 'start',
+            }}
           >
-            {profiles.map(p => {
-              const active = p.id === selectedProfileId
+            {profiles.map(profile => {
+              const profileGoals = goals.filter(g => g.profileId === profile.id)
               return (
-                <button
-                  key={p.id}
-                  type="button"
-                  className="sky-profile-pill"
-                  onClick={() => setSelectedProfileId(active ? null : p.id)}
-                  style={{
-                    background: active ? p.color : undefined,
-                    color: active ? '#fff' : undefined,
-                    borderColor: active ? p.color : undefined,
-                    fontWeight: 700,
-                  }}
-                >
-                  <span
+                <div key={profile.id} className="sky-card" style={{ overflow: 'hidden' }}>
+                  {/* Profile header */}
+                  <div
                     style={{
-                      width: '20px',
-                      height: '20px',
-                      borderRadius: '50%',
-                      background: active ? 'rgba(255,255,255,0.25)' : p.color,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '0.85rem 1.1rem',
+                      background: profile.color,
                       color: '#fff',
-                      fontWeight: 700,
-                      fontSize: '0.7rem',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
                     }}
                   >
-                    {p.name.charAt(0).toUpperCase()}
-                  </span>
-                  <span>{p.name}</span>
-                  <span
-                    style={{
-                      fontSize: '0.95rem',
-                      opacity: 0.9,
-                      marginLeft: '0.35rem',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.2rem',
-                    }}
-                  >
-                    <i
-                      className="pi pi-star-fill"
-                      style={{ fontSize: '0.9rem', color: active ? '#fff' : 'var(--sky-amber)' }}
-                    />
-                    <span style={{ fontSize: '0.85rem' }}>{p.totalStars ?? 0}</span>
-                  </span>
-                </button>
+                    <span
+                      style={{
+                        width: '34px',
+                        height: '34px',
+                        borderRadius: '50%',
+                        background: 'rgba(255,255,255,0.25)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 700,
+                        fontSize: '1rem',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {profile.name.charAt(0).toUpperCase()}
+                    </span>
+                    <span style={{ fontWeight: 700, fontSize: '1.1rem', flex: 1, minWidth: 0 }}>
+                      {profile.name}
+                    </span>
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        fontWeight: 700,
+                        fontSize: '0.95rem',
+                        opacity: 0.9,
+                      }}
+                    >
+                      <i className="pi pi-star-fill" style={{ fontSize: '0.95rem' }} />
+                      {profile.totalStars ?? 0}
+                    </span>
+                  </div>
+
+                  {/* Goals for this profile */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                    {profileGoals.length === 0 ? (
+                      <div
+                        style={{
+                          padding: '1.5rem',
+                          textAlign: 'center',
+                          color: 'var(--sky-text-secondary)',
+                          fontSize: '0.9rem',
+                        }}
+                      >
+                        <i className="pi pi-flag" style={{ display: 'block', fontSize: '1.5rem', marginBottom: '0.5rem' }} />
+                        No goals yet
+                      </div>
+                    ) : (
+                      profileGoals.map((goal, idx) => (
+                        <div
+                          key={goal.id}
+                          style={{
+                            position: 'relative',
+                            borderTop: idx > 0 ? '1px solid var(--sky-border, rgba(44,62,62,0.08))' : undefined,
+                          }}
+                        >
+                          <GoalCard
+                            goal={goal}
+                            accentColor={profile.color}
+                            onSpendStars={g => handleOpenSpend(g, profile)}
+                            onWinAward={handleWinAward}
+                          />
+                          <button
+                            type="button"
+                            aria-label="Delete goal"
+                            title="Delete goal"
+                            style={{
+                              position: 'absolute',
+                              top: '0.5rem',
+                              right: '0.5rem',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              color: 'var(--sky-text-secondary)',
+                              padding: '0.25rem',
+                              lineHeight: 1,
+                              fontSize: '0.85rem',
+                              opacity: 0.5,
+                            }}
+                            onClick={() => handleDeleteGoal(goal)}
+                          >
+                            <i className="pi pi-times" />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
               )
             })}
           </div>
-
-          {/* Goals list */}
-          <div className="scroll-container" style={{ flex: 1 }}>
-            {!selectedProfileId ? (
-              <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--sky-text-secondary)' }}>
-                <i
-                  className="pi pi-bullseye"
-                  style={{ fontSize: '3rem', marginBottom: '1rem', display: 'block' }}
-                />
-                <p>Select a profile above to see their goals.</p>
-              </div>
-            ) : goalsLoading ? (
-              <ProgressBar mode="indeterminate" style={{ height: '4px' }} />
-            ) : profileGoals.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--sky-text-secondary)' }}>
-                <i
-                  className="pi pi-flag"
-                  style={{ fontSize: '3rem', marginBottom: '1rem', display: 'block' }}
-                />
-                <p>No goals yet for {selectedProfile?.name}.</p>
-                <p style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
-                  Goals can be added from the profile settings in the admin portal.
-                </p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {profileGoals.map(goal => (
-                  <div key={goal.id} style={{ position: 'relative' }}>
-                    <GoalCard
-                      goal={goal}
-                      accentColor={selectedProfile?.color}
-                      onSpendStars={handleOpenSpend}
-                      onWinAward={handleWinAward}
-                    />
-                    <button
-                      type="button"
-                      aria-label="Delete goal"
-                      title="Delete goal"
-                      style={{
-                        position: 'absolute',
-                        top: '0.5rem',
-                        right: '0.5rem',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: 'var(--sky-text-secondary)',
-                        padding: '0.25rem',
-                        lineHeight: 1,
-                        fontSize: '0.85rem',
-                        opacity: 0.5,
-                      }}
-                      onClick={() => handleDeleteGoal(goal)}
-                    >
-                      <i className="pi pi-times" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </>
+        </div>
       )}
 
       {/* Spend Stars Dialog */}
-      {spendDialogGoal && selectedProfile && (
+      {spendDialogGoal && spendDialogProfile && (
         <Dialog
           header={`Apply Stars to "${spendDialogGoal.title}"`}
           visible
-          onHide={() => setSpendDialogGoal(null)}
+          onHide={() => { setSpendDialogGoal(null); setSpendDialogProfile(null) }}
           style={{ width: '90vw', maxWidth: '400px' }}
           dismissableMask
           footer={
             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-              <Button label="Cancel" className="p-button-text" onClick={() => setSpendDialogGoal(null)} />
+              <Button label="Cancel" className="p-button-text" onClick={() => { setSpendDialogGoal(null); setSpendDialogProfile(null) }} />
               <Button
                 label={`Apply ${spendAmount} ⭐`}
                 onClick={handleSpendStars}
-                disabled={spendAmount < 1 || spendAmount > selectedProfile.totalStars}
+                disabled={spendAmount < 1 || spendAmount > spendDialogProfile.totalStars}
               />
             </div>
           }
@@ -230,9 +225,9 @@ const GoalsPage: React.FC = () => {
               }}
             >
               <i className="pi pi-star-fill" style={{ color: 'var(--sky-amber)', fontSize: '1.2rem' }} />
-              <span style={{ fontWeight: 600 }}>{selectedProfile.name} has</span>
+              <span style={{ fontWeight: 600 }}>{spendDialogProfile.name} has</span>
               <span style={{ fontWeight: 700, color: 'var(--sky-amber)', fontSize: '1.15rem' }}>
-                {selectedProfile.totalStars}
+                {spendDialogProfile.totalStars}
               </span>
               <span style={{ fontWeight: 600 }}>stars available</span>
             </div>
@@ -242,9 +237,9 @@ const GoalsPage: React.FC = () => {
               </label>
               <InputNumber
                 value={spendAmount}
-                onValueChange={e => setSpendAmount(Math.max(1, Math.min(e.value ?? 1, selectedProfile.totalStars)))}
+                onValueChange={e => setSpendAmount(Math.max(1, Math.min(e.value ?? 1, spendDialogProfile.totalStars)))}
                 min={1}
-                max={selectedProfile.totalStars}
+                max={spendDialogProfile.totalStars}
                 showButtons
                 className="w-full"
               />

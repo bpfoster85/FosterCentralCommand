@@ -18,8 +18,8 @@ body,
   height: 100%;
   overflow: hidden;
   font-family: $sky-font-family;
-  background-color: $sky-bg;
-  color: $sky-text-primary;
+  background-color: var(--sky-bg);
+  color: var(--sky-text-primary);
 }
 
 .fullscreen-container {

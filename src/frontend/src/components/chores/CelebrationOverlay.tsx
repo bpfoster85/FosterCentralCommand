@@ -130,6 +130,9 @@ const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
   const confettiRef = useRef<Particle[]>([])
   const fireworksRef = useRef<Firework[]>([])
   const nextFireworkRef = useRef<number>(0)
+  // Keep the latest onDone in a ref so changing it doesn't restart the animation.
+  const onDoneRef = useRef(onDone)
+  useEffect(() => { onDoneRef.current = onDone }, [onDone])
 
   useEffect(() => {
     if (!active) return
@@ -239,7 +242,7 @@ const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
         animFrameRef.current = requestAnimationFrame(animate)
       } else {
         ctx.clearRect(0, 0, canvas.width, canvas.height)
-        onDone?.()
+        onDoneRef.current?.()
       }
     }
 
@@ -248,7 +251,7 @@ const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
     return () => {
       cancelAnimationFrame(animFrameRef.current)
     }
-  }, [active, duration, onDone])
+  }, [active, duration])
 
   if (!active) return null
 
@@ -271,7 +274,7 @@ const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
         alignItems: 'center',
         justifyContent: 'center',
       }}
-      onClick={onDone}
+      onClick={() => onDoneRef.current?.()}
       role="dialog"
       aria-modal="true"
       aria-label="Celebration"

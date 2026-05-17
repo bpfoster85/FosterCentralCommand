@@ -30,10 +30,12 @@ export function useNeedsVirtualKeyboard(): boolean {
 
     const coarse = window.matchMedia('(pointer: coarse)').matches
     const anyCoarse = window.matchMedia('(any-pointer: coarse)').matches
-    const noHover = window.matchMedia('(any-hover: none)').matches
 
-    // Desktop UA + touch-capable hardware = kiosk-style touchscreen.
-    return coarse || (anyCoarse && noHover)
+    // Desktop UA + any touch-capable pointer = kiosk-style touchscreen.
+    // We use `anyCoarse` alone (without requiring no-hover) so that a 4K
+    // wall-mounted display connected to a PC with a mouse still gets the
+    // keyboard when the user touches the screen.
+    return coarse || anyCoarse
   })
 
   return needs
