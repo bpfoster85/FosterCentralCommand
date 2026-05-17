@@ -9,7 +9,18 @@ interface ProfileCardProps {
   onDelete: (profile: Profile) => void
 }
 
+const getContrastText = (hex: string): string => {
+  const m = hex.replace('#', '')
+  if (m.length !== 6) return '#ffffff'
+  const r = parseInt(m.slice(0, 2), 16)
+  const g = parseInt(m.slice(2, 4), 16)
+  const b = parseInt(m.slice(4, 6), 16)
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return luminance > 0.6 ? '#2c3e3e' : '#ffffff'
+}
+
 const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onEdit, onDelete }) => {
+  const profileTextColor = getContrastText(profile.color)
   return (
     <div
       className="sky-card sky-fade-in"
@@ -26,7 +37,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onEdit, onDelete }) 
         label={profile.name.charAt(0).toUpperCase()}
         style={{
           backgroundColor: profile.color,
-          color: '#fff',
+          color: profileTextColor,
           width: '52px',
           height: '52px',
           fontSize: '1.5rem',

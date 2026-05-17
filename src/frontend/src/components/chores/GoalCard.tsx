@@ -16,10 +16,20 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, accentColor, onSpendStars, on
   const progress = target > 0 ? Math.min(100, Math.round((applied / target) * 100)) : 0
   const attained = target > 0 && applied >= target && !goal.isAchieved
   const achieved = goal.isAchieved
+  const canSpend = !achieved && !attained && !!onSpendStars
 
   return (
     <div
       className="sky-card sky-fade-in"
+      role={canSpend ? 'button' : undefined}
+      tabIndex={canSpend ? 0 : undefined}
+      onClick={canSpend ? () => onSpendStars?.(goal) : undefined}
+      onKeyDown={canSpend ? e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onSpendStars?.(goal)
+        }
+      } : undefined}
       style={{
         padding: '1rem 1.25rem',
         display: 'flex',
@@ -27,6 +37,7 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, accentColor, onSpendStars, on
         gap: '1rem',
         borderLeft: `4px solid ${achieved ? 'var(--sky-sage, #6bcb77)' : (accentColor ?? 'var(--sky-amber)')}`,
         opacity: achieved ? 0.75 : 1,
+        cursor: canSpend ? 'pointer' : 'default',
       }}
     >
       <div
@@ -94,15 +105,6 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, accentColor, onSpendStars, on
               className="p-button-success p-button-sm"
               style={{ fontWeight: 700, whiteSpace: 'nowrap' }}
               onClick={() => onWinAward(goal)}
-            />
-          )}
-          {!attained && onSpendStars && (
-            <Button
-              icon="pi pi-star"
-              label="Apply Stars"
-              className="p-button-text p-button-sm"
-              style={{ whiteSpace: 'nowrap' }}
-              onClick={() => onSpendStars(goal)}
             />
           )}
         </div>

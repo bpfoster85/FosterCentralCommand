@@ -422,6 +422,21 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+// Larger, easier-to-tap chore checkboxes
+.sky-chore-checkbox.p-checkbox {
+  display: inline-flex;
+  padding: 0.1rem;
+
+  .p-checkbox-box {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .p-checkbox-icon {
+    font-size: 0.95rem;
+  }
+}
+
 // =============================================================================
 // Inputs
 // =============================================================================
