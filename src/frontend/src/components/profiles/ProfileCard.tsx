@@ -2,6 +2,7 @@ import React from 'react'
 import { Button } from 'primereact/button'
 import { Avatar } from 'primereact/avatar'
 import type { Profile } from '../../types'
+import { getContrastText } from '../../utils/colors'
 
 interface ProfileCardProps {
   profile: Profile
@@ -10,6 +11,7 @@ interface ProfileCardProps {
 }
 
 const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onEdit, onDelete }) => {
+  const profileTextColor = getContrastText(profile.color)
   return (
     <div
       className="sky-card sky-fade-in"
@@ -26,7 +28,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ profile, onEdit, onDelete }) 
         label={profile.name.charAt(0).toUpperCase()}
         style={{
           backgroundColor: profile.color,
-          color: '#fff',
+          color: profileTextColor,
           width: '52px',
           height: '52px',
           fontSize: '1.5rem',

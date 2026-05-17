@@ -11,6 +11,7 @@ import {
   isSameDay,
   toDateKey,
 } from '../../utils/choreSchedule'
+import { getContrastText } from '../../utils/colors'
 import { sortProfilesForChores } from '../../utils/profileOrder'
 
 interface ChoresWeekViewProps {
@@ -94,6 +95,7 @@ const DayColumn: React.FC<DayColumnProps> = ({ date, chores, profiles, onToggleC
               >
                 <div onClick={e => e.stopPropagation()}>
                   <Checkbox
+                    className="sky-chore-checkbox"
                     checked={completed}
                     onChange={() => onToggleComplete(chore, date)}
                     disabled={approved}
@@ -246,6 +248,7 @@ const ChoresWeekView: React.FC<ChoresWeekViewProps> = ({ weekStart, chores, prof
       ) : (
         profilesWithChores.map(profile => {
           const profileChores = chores.filter(c => c.assignedProfileId === profile.id)
+          const profileTextColor = getContrastText(profile.color)
           return (
             <div
               key={profile.id}
@@ -273,7 +276,7 @@ const ChoresWeekView: React.FC<ChoresWeekViewProps> = ({ weekStart, chores, prof
                     height: '32px',
                     borderRadius: '50%',
                     backgroundColor: profile.color,
-                    color: '#fff',
+                    color: profileTextColor,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',

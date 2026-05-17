@@ -8,6 +8,7 @@ import {
   isChoreCompletedOn,
   isChorePendingOn,
 } from '../../utils/choreSchedule'
+import { getContrastText } from '../../utils/colors'
 import CelebrationOverlay from './CelebrationOverlay'
 
 interface ChoresDayViewProps {
@@ -50,6 +51,7 @@ const ProfileColumn: React.FC<ProfileColumnProps> = ({ profile, date, chores, on
   const columnBg = tint(profile.color, 0.88)
   const cardBg = tint(profile.color, 0.78)
   const cardBgDone = tint(profile.color, 0.92)
+  const profileTextColor = getContrastText(profile.color)
 
   return (
     <div
@@ -71,7 +73,7 @@ const ProfileColumn: React.FC<ProfileColumnProps> = ({ profile, date, chores, on
             height: '40px',
             borderRadius: '50%',
             background: profile.color,
-            color: '#fff',
+            color: profileTextColor,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -207,8 +209,9 @@ const ProfileColumn: React.FC<ProfileColumnProps> = ({ profile, date, chores, on
                     )}
                   </div>
                 </div>
-                <div style={{ flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                <div style={{ flexShrink: 0, padding: '0.2rem', cursor: approved ? 'not-allowed' : 'pointer' }} onClick={e => e.stopPropagation()}>
                   <Checkbox
+                    className="sky-chore-checkbox"
                     checked={completed}
                     onChange={() => onToggleComplete(chore, date)}
                     disabled={approved}
@@ -231,6 +234,7 @@ const ChoresDayView: React.FC<ChoresDayViewProps> = ({ date, chores, profiles, o
   const selectedProfile = selectedChore
     ? profiles.find(p => p.id === selectedChore.assignedProfileId)
     : undefined
+  const selectedProfileTextColor = selectedProfile ? getContrastText(selectedProfile.color) : '#ffffff'
 
   const handleToggleWithCelebration = (chore: Chore, d: Date) => {
     const wasCompleted = isChoreCompletedOn(chore, d)
@@ -293,7 +297,7 @@ const ChoresDayView: React.FC<ChoresDayViewProps> = ({ date, chores, profiles, o
             <div
               style={{
                 background: selectedProfile?.color ?? 'var(--sky-amber)',
-                color: '#fff',
+                color: selectedProfileTextColor,
                 padding: '1.25rem 1.5rem',
                 borderTopLeftRadius: '6px',
                 borderTopRightRadius: '6px',

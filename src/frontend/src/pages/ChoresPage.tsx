@@ -8,6 +8,7 @@ import ChoresDayView from '../components/chores/ChoresDayView'
 import MobileProfilePicker from '../components/profiles/MobileProfilePicker'
 import type { Chore, Profile } from '../types'
 import { addDays, toDateKey } from '../utils/choreSchedule'
+import { getContrastText, getProfileAvatarOverlay } from '../utils/colors'
 import { sortProfilesForChores } from '../utils/profileOrder'
 
 const DAY_LABEL_FORMAT: Intl.DateTimeFormatOptions = {
@@ -121,29 +122,30 @@ const ChoresPage: React.FC = () => {
             </button>
             {profiles.map(p => {
               const active = p.id === profileFilter
+              const activeTextColor = active ? getContrastText(p.color) : undefined
               return (
                 <button
                   key={p.id}
                   type="button"
                   className="sky-profile-pill"
                   onClick={() => setProfileFilter(p.id)}
-                  style={{
-                    background: active ? p.color : undefined,
-                    color: active ? '#fff' : undefined,
-                    borderColor: active ? p.color : undefined,
-                    fontWeight: 700,
-                  }}
+                    style={{
+                      background: active ? p.color : undefined,
+                      color: active ? activeTextColor : undefined,
+                      borderColor: active ? p.color : undefined,
+                      fontWeight: 700,
+                    }}
                 >
                   <span
                     style={{
-                      width: '20px',
-                      height: '20px',
-                      borderRadius: '50%',
-                      background: active ? 'rgba(255,255,255,0.25)' : p.color,
-                      color: '#fff',
-                      fontWeight: 700,
-                      fontSize: '0.7rem',
-                      display: 'inline-flex',
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        background: active ? getProfileAvatarOverlay(activeTextColor ?? '') : p.color,
+                        color: active ? activeTextColor : getContrastText(p.color),
+                        fontWeight: 700,
+                        fontSize: '0.7rem',
+                        display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
@@ -152,7 +154,7 @@ const ChoresPage: React.FC = () => {
                   </span>
                   <span>{p.name}</span>
                   <span style={{ fontSize: '1.05rem', opacity: 0.9, marginLeft: '0.35rem', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
-                    <i className="pi pi-star-fill" style={{ fontSize: '1.05rem', color: active ? '#fff' : 'var(--sky-amber)' }} />
+                    <i className="pi pi-star-fill" style={{ fontSize: '1.05rem', color: active ? activeTextColor : 'var(--sky-amber)' }} />
                     <span style={{ fontSize: '0.95rem' }}>{p.totalStars ?? 0}</span>
                   </span>
                 </button>

@@ -3,6 +3,9 @@ import type { Profile } from '../types'
 const CHORES_PROFILE_ORDER = ['ellinor', 'emrey', 'quinton', 'sarah', 'bryan']
 const CHORES_HIDDEN_PROFILES = new Set(['sarah', 'bryan'])
 
+export const isHiddenChoreProfile = (name: string): boolean =>
+  CHORES_HIDDEN_PROFILES.has(name.trim().toLowerCase())
+
 /**
  * Stable sort that places known family members in the configured order for
  * chores displays. Hidden parent profiles (Sarah, Bryan) are filtered out.
@@ -14,7 +17,7 @@ export const sortProfilesForChores = (profiles: Profile[]): Profile[] => {
     return idx === -1 ? CHORES_PROFILE_ORDER.length : idx
   }
   return profiles
-    .filter(p => !CHORES_HIDDEN_PROFILES.has(p.name.trim().toLowerCase()))
+    .filter(p => !isHiddenChoreProfile(p.name))
     .sort((a, b) => {
       const diff = rank(a) - rank(b)
       if (diff !== 0) return diff
