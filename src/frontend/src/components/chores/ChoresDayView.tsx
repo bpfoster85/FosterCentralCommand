@@ -210,7 +210,7 @@ const ProfileColumn: React.FC<ProfileColumnProps> = ({ profile, date, chores, on
                   </div>
                 </div>
                 <div
-                  className={`sky-chore-checkbox-cell ${approved ? 'sky-chore-checkbox-cell--disabled' : ''}`.trim()}
+                  className={`sky-chore-checkbox-cell ${approved ? 'sky-chore-checkbox-cell--disabled' : ''}`}
                   onClick={e => e.stopPropagation()}
                 >
                   <Checkbox
