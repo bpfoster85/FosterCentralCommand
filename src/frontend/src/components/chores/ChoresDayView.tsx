@@ -209,7 +209,10 @@ const ProfileColumn: React.FC<ProfileColumnProps> = ({ profile, date, chores, on
                     )}
                   </div>
                 </div>
-                <div style={{ flexShrink: 0, padding: '0.2rem', cursor: approved ? 'not-allowed' : 'pointer' }} onClick={e => e.stopPropagation()}>
+                <div
+                  className={`sky-chore-checkbox-cell ${approved ? 'sky-chore-checkbox-cell--disabled' : ''}`}
+                  onClick={e => e.stopPropagation()}
+                >
                   <Checkbox
                     className="sky-chore-checkbox"
                     checked={completed}

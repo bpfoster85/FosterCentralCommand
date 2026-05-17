@@ -362,13 +362,6 @@ const AdminPage: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
         <i className="pi pi-shield" style={{ fontSize: '1.25rem', color: 'var(--sky-amber)' }} />
         <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Admin</h2>
-        <Button
-          label="New Chore"
-          icon="pi pi-plus"
-          onClick={openCreateChore}
-          disabled={profiles.length === 0}
-          style={{ marginLeft: 'auto' }}
-        />
       </div>
 
       {/* === Pending approvals === */}
@@ -942,6 +935,13 @@ const AdminPage: React.FC = () => {
           <span style={{ fontSize: '0.8rem', color: 'var(--sky-text-secondary)' }}>
             {filteredChores.length} {filteredChores.length === 1 ? 'chore' : 'chores'}
           </span>
+          <Button
+            label="New Chore"
+            icon="pi pi-plus"
+            onClick={openCreateChore}
+            disabled={profiles.length === 0}
+            style={{ marginLeft: 'auto' }}
+          />
         </header>
 
         {choresLoading ? (

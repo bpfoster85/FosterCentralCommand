@@ -437,6 +437,22 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+// Give chore checkbox column extra room so it takes two "spaces" in the row.
+.sky-chore-checkbox-cell {
+  flex: 0 0 3rem;
+  min-width: 3rem;
+  flex-shrink: 0;
+  padding: 0.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.sky-chore-checkbox-cell--disabled {
+  cursor: not-allowed;
+}
+
 // =============================================================================
 // Inputs
 // =============================================================================
