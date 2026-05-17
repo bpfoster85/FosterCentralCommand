@@ -93,7 +93,10 @@ const DayColumn: React.FC<DayColumnProps> = ({ date, chores, profiles, onToggleC
                 }}
                 onClick={() => onEditChore?.(chore)}
               >
-                <div className="sky-chore-checkbox-cell" onClick={e => e.stopPropagation()}>
+                <div
+                  className={`sky-chore-checkbox-cell${approved ? ' sky-chore-checkbox-cell--disabled' : ''}`}
+                  onClick={e => e.stopPropagation()}
+                >
                   <Checkbox
                     className="sky-chore-checkbox"
                     checked={completed}
