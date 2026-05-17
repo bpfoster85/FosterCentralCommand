@@ -8,18 +8,8 @@ import { useGoals } from '../hooks/useGoals'
 import GoalCard from '../components/chores/GoalCard'
 import CelebrationOverlay from '../components/chores/CelebrationOverlay'
 import type { Goal, Profile } from '../types'
-
-const HIDDEN_GOAL_PROFILES = new Set(['bryan', 'sarah'])
-
-const getContrastText = (hex: string): string => {
-  const m = hex.replace('#', '')
-  if (m.length !== 6) return '#ffffff'
-  const r = parseInt(m.slice(0, 2), 16)
-  const g = parseInt(m.slice(2, 4), 16)
-  const b = parseInt(m.slice(4, 6), 16)
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-  return luminance > 0.6 ? '#2c3e3e' : '#ffffff'
-}
+import { getContrastText, getProfileAvatarOverlay } from '../utils/colors'
+import { isHiddenChoreProfile } from '../utils/profileOrder'
 
 const GoalsPage: React.FC = () => {
   const { profiles, loading: profilesLoading, refetch: refetchProfiles } = useProfiles()
@@ -32,7 +22,7 @@ const GoalsPage: React.FC = () => {
   const [spendDialogProfile, setSpendDialogProfile] = useState<Profile | null>(null)
   const [spendAmount, setSpendAmount] = useState<number>(1)
   const visibleProfiles = useMemo(
-    () => profiles.filter(p => !HIDDEN_GOAL_PROFILES.has(p.name.trim().toLowerCase())),
+    () => profiles.filter(p => !isHiddenChoreProfile(p.name)),
     [profiles]
   )
 
@@ -52,7 +42,7 @@ const GoalsPage: React.FC = () => {
   const handleOpenSpend = (goal: Goal, profile: Profile) => {
     setSpendDialogGoal(goal)
     setSpendDialogProfile(profile)
-    setSpendAmount((profile.totalStars ?? 0) > 0 ? 1 : 0)
+    setSpendAmount(1)
   }
 
   const handleSpendStars = async () => {
@@ -120,7 +110,7 @@ const GoalsPage: React.FC = () => {
                         width: '34px',
                         height: '34px',
                         borderRadius: '50%',
-                        background: profileTextColor === '#ffffff' ? 'rgba(255,255,255,0.25)' : 'rgba(44,62,62,0.18)',
+                        background: getProfileAvatarOverlay(profileTextColor),
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',

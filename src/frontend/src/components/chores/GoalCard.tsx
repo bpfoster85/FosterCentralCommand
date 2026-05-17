@@ -17,17 +17,20 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, accentColor, onSpendStars, on
   const attained = target > 0 && applied >= target && !goal.isAchieved
   const achieved = goal.isAchieved
   const canSpend = !achieved && !attained && !!onSpendStars
+  const handleSpend = () => {
+    if (onSpendStars) onSpendStars(goal)
+  }
 
   return (
     <div
       className="sky-card sky-fade-in"
       role={canSpend ? 'button' : undefined}
       tabIndex={canSpend ? 0 : undefined}
-      onClick={canSpend ? () => onSpendStars?.(goal) : undefined}
+      onClick={canSpend ? handleSpend : undefined}
       onKeyDown={canSpend ? e => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
-          onSpendStars?.(goal)
+          handleSpend()
         }
       } : undefined}
       style={{

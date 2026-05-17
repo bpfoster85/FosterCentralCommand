@@ -11,6 +11,7 @@ import {
   isSameDay,
   toDateKey,
 } from '../../utils/choreSchedule'
+import { getContrastText } from '../../utils/colors'
 import { sortProfilesForChores } from '../../utils/profileOrder'
 
 interface ChoresWeekViewProps {
@@ -29,16 +30,6 @@ interface DayColumnProps {
   onToggleComplete: (chore: Chore, date: Date) => void
   onEditChore?: (chore: Chore) => void
   showProfileName?: boolean
-}
-
-const getContrastText = (hex: string): string => {
-  const m = hex.replace('#', '')
-  if (m.length !== 6) return '#ffffff'
-  const r = parseInt(m.slice(0, 2), 16)
-  const g = parseInt(m.slice(2, 4), 16)
-  const b = parseInt(m.slice(4, 6), 16)
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-  return luminance > 0.6 ? '#2c3e3e' : '#ffffff'
 }
 
 const DayColumn: React.FC<DayColumnProps> = ({ date, chores, profiles, onToggleComplete, onEditChore, showProfileName }) => {

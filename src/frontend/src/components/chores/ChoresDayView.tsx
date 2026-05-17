@@ -8,6 +8,7 @@ import {
   isChoreCompletedOn,
   isChorePendingOn,
 } from '../../utils/choreSchedule'
+import { getContrastText } from '../../utils/colors'
 import CelebrationOverlay from './CelebrationOverlay'
 
 interface ChoresDayViewProps {
@@ -30,16 +31,6 @@ const tint = (hex: string, amount = 0.85): string => {
   const lg = Math.round(g + (255 - g) * amount)
   const lb = Math.round(b + (255 - b) * amount)
   return `rgb(${lr}, ${lg}, ${lb})`
-}
-
-const getContrastText = (hex: string): string => {
-  const m = hex.replace('#', '')
-  if (m.length !== 6) return '#ffffff'
-  const r = parseInt(m.slice(0, 2), 16)
-  const g = parseInt(m.slice(2, 4), 16)
-  const b = parseInt(m.slice(4, 6), 16)
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-  return luminance > 0.6 ? '#2c3e3e' : '#ffffff'
 }
 
 interface ProfileColumnProps {

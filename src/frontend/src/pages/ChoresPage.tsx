@@ -8,17 +8,8 @@ import ChoresDayView from '../components/chores/ChoresDayView'
 import MobileProfilePicker from '../components/profiles/MobileProfilePicker'
 import type { Chore, Profile } from '../types'
 import { addDays, toDateKey } from '../utils/choreSchedule'
+import { getContrastText, getProfileAvatarOverlay } from '../utils/colors'
 import { sortProfilesForChores } from '../utils/profileOrder'
-
-const getContrastText = (hex: string): string => {
-  const m = hex.replace('#', '')
-  if (m.length !== 6) return '#ffffff'
-  const r = parseInt(m.slice(0, 2), 16)
-  const g = parseInt(m.slice(2, 4), 16)
-  const b = parseInt(m.slice(4, 6), 16)
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-  return luminance > 0.6 ? '#2c3e3e' : '#ffffff'
-}
 
 const DAY_LABEL_FORMAT: Intl.DateTimeFormatOptions = {
   weekday: 'long',
@@ -150,9 +141,7 @@ const ChoresPage: React.FC = () => {
                         width: '20px',
                         height: '20px',
                         borderRadius: '50%',
-                        background: active
-                          ? (activeTextColor === '#ffffff' ? 'rgba(255,255,255,0.25)' : 'rgba(44,62,62,0.18)')
-                          : p.color,
+                        background: active ? getProfileAvatarOverlay(activeTextColor ?? '') : p.color,
                         color: active ? activeTextColor : getContrastText(p.color),
                         fontWeight: 700,
                         fontSize: '0.7rem',
