@@ -6,6 +6,7 @@ import {
   getAdminKey,
   getFamilyName,
 } from '../../api/apiClient'
+import { useTheme } from '../../hooks/useTheme'
 
 const navItems = [
   { label: 'Dashboard', icon: 'pi pi-home', path: '/command-center' },
@@ -111,6 +112,7 @@ const AppShell: React.FC = () => {
   const isAdmin = Boolean(getAdminKey())
   const [mobileOpen, setMobileOpen] = useState(false)
   const drawerRef = useRef<HTMLDivElement>(null)
+  const [theme, toggleTheme] = useTheme()
 
   const isActive = (path: string) => location.pathname.startsWith(path)
 
@@ -197,10 +199,18 @@ const AppShell: React.FC = () => {
             </button>
           ))}
           <button
+            className="sky-nav-tab sky-nav-tab--theme-toggle"
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            style={{ marginLeft: 'auto' }}
+          >
+            <i className={theme === 'dark' ? 'pi pi-sun' : 'pi pi-moon'} />
+          </button>
+          <button
             className="sky-nav-tab"
             onClick={handleLogout}
             title={signOutLabel}
-            style={{ marginLeft: 'auto' }}
           >
             <i className="pi pi-sign-out" />
             <span>{signOutLabel}</span>
@@ -225,6 +235,14 @@ const AppShell: React.FC = () => {
               <span>{item.label}</span>
             </button>
           ))}
+          <button
+            role="menuitem"
+            className="sky-nav-mobile-item"
+            onClick={toggleTheme}
+          >
+            <i className={theme === 'dark' ? 'pi pi-sun' : 'pi pi-moon'} />
+            <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+          </button>
           <button
             role="menuitem"
             className="sky-nav-mobile-item"

@@ -33,6 +33,7 @@
   --sky-text-primary:   #{$sky-text-primary};
   --sky-text-secondary: #{$sky-text-secondary};
   --sky-border:         #{$sky-border};
+  --sky-border-strong:  #{$sky-border-strong};
 
   // Shadows / radii
   --sky-shadow-sm:   #{$sky-shadow-sm};
@@ -59,8 +60,8 @@
 // =============================================================================
 body {
   font-family: $sky-font-family;
-  color: $sky-text-primary;
-  background-color: $sky-bg;
+  color: var(--sky-text-primary);
+  background-color: var(--sky-bg);
   font-feature-settings: 'cv11', 'ss01', 'ss03';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -69,7 +70,7 @@ body {
 h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
   letter-spacing: -0.015em;
-  color: $sky-text-primary;
+  color: var(--sky-text-primary);
 }
 
 // =============================================================================
@@ -1763,5 +1764,428 @@ textarea.p-inputtext,
   .sky-nav-tab {
     font-size: 1.15rem;
     padding: 0.75rem 1.5rem;
+  }
+}
+
+// =============================================================================
+// Dark theme — Skylight deep mode
+// Activated by setting `data-theme="dark"` on <html> via useTheme hook.
+// Overrides semantic CSS custom properties then restyles every key component
+// whose SCSS uses compiled SASS variables (not the CSS vars).
+// =============================================================================
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  // --- Semantic token overrides ---
+  --sky-bg:             #0e1a1a;
+  --sky-surface:        #152323;
+  --sky-surface-soft:   #1b2d2d;
+  --sky-text-primary:   #ddeae8;
+  --sky-text-secondary: #7fa9a5;
+  --sky-border:         rgba(255, 255, 255, 0.08);
+  --sky-border-strong:  rgba(255, 255, 255, 0.14);
+
+  // PrimeReact runtime tokens (used by lara theme internally)
+  --primary-color:        #{$sky-lagoon-deep};
+  --primary-color-text:   #ffffff;
+  --surface-ground:       #0e1a1a;
+  --surface-card:         #152323;
+  --surface-border:       rgba(255, 255, 255, 0.08);
+  --text-color:           #ddeae8;
+  --text-color-secondary: #7fa9a5;
+  --surface-section:      #0e1a1a;
+  --surface-overlay:      #1b2d2d;
+  --surface-hover:        #1b2d2d;
+  --surface-0:            #152323;
+  --surface-50:           #1b2d2d;
+  --surface-100:          #1f3232;
+  --mask-bg:              rgba(0, 0, 0, 0.6);
+  --focus-ring:           0 0 0 0.2rem rgba(127, 179, 179, 0.25);
+
+  // --- Core typography ---
+  body {
+    background-color: var(--sky-bg);
+    color: var(--sky-text-primary);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--sky-text-primary);
+  }
+
+  // --- Top Navigation bar ---
+  .sky-nav-tabs {
+    background: var(--sky-surface);
+    border-color: var(--sky-border);
+  }
+
+  .sky-nav-clock {
+    background: linear-gradient(135deg, rgba(127, 179, 179, 0.16) 0%, rgba(184, 200, 168, 0.12) 100%);
+    border-color: var(--sky-border);
+
+    &-time   { color: var(--sky-text-primary);   }
+    &-zone   { color: var(--sky-text-secondary);  }
+    &-weather { border-color: var(--sky-border-strong); }
+    &-weather-temp { color: var(--sky-text-primary); }
+  }
+
+  .sky-nav-tab {
+    color: var(--sky-text-secondary);
+
+    &:hover {
+      background: var(--sky-surface-soft);
+      color: var(--sky-text-primary);
+    }
+
+    &.active {
+      background: $sky-lagoon-deep;
+      color: #fff;
+    }
+  }
+
+  .sky-nav-hamburger {
+    color: var(--sky-text-primary);
+
+    &:hover { background: var(--sky-surface-soft); }
+  }
+
+  .sky-nav-mobile-menu {
+    border-color: var(--sky-border);
+  }
+
+  .sky-nav-mobile-item {
+    color: var(--sky-text-primary);
+
+    .pi { color: var(--sky-text-secondary); }
+
+    &.active {
+      background: $sky-lagoon-deep;
+      color: #fff;
+      .pi { color: #fff; }
+    }
+
+    &:not(.active):hover {
+      background: var(--sky-surface-soft);
+    }
+  }
+
+  // --- Cards & Surfaces ---
+  .p-card,
+  .sky-card {
+    background: var(--sky-surface) !important;
+    border-color: var(--sky-border) !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4) !important;
+  }
+
+  .sky-widget {
+    background: var(--sky-surface);
+    border-color: var(--sky-border);
+
+    &-header {
+      background: var(--sky-surface-soft);
+      border-color: var(--sky-border);
+    }
+
+    &-title { color: var(--sky-text-primary); }
+  }
+
+  // --- Week tile grid ---
+  .sky-day-tile {
+    background: var(--sky-surface);
+    border-color: var(--sky-border);
+
+    &.today {
+      border-color: $sky-lagoon;
+      box-shadow: 0 0 0 1px $sky-lagoon;
+    }
+  }
+
+  .sky-day-tile-header {
+    background: var(--sky-surface-soft);
+    border-color: var(--sky-border);
+    color: var(--sky-text-primary);
+
+    &:hover,
+    &:focus-visible { background: rgba($sky-lagoon, 0.12); }
+
+    .sky-day-tile.today & { background: rgba($sky-lagoon, 0.14); }
+  }
+
+  .sky-day-tile-name {
+    color: var(--sky-text-secondary);
+    .sky-day-tile.today & { color: $sky-lagoon; }
+  }
+
+  .sky-day-tile-num {
+    color: var(--sky-text-primary);
+    .sky-day-tile.today & { color: $sky-lagoon; }
+  }
+
+  .sky-day-tile-empty { color: var(--sky-text-secondary); }
+
+  .sky-day-event {
+    background: rgba($sky-lagoon, 0.12);
+    border-left-color: $sky-lagoon;
+  }
+
+  .sky-day-event-time  { color: var(--sky-text-secondary); }
+  .sky-day-event-title { color: var(--sky-text-primary);   }
+  .sky-day-event-meta  { color: var(--sky-text-secondary); }
+
+  .sky-control-tile {
+    background: linear-gradient(135deg, rgba($sky-lagoon, 0.1) 0%, rgba($sky-sage, 0.08) 100%);
+    border-color: var(--sky-border);
+  }
+
+  .sky-control-tile-range { color: var(--sky-text-primary); }
+
+  // --- Profile pills ---
+  .sky-profile-pill {
+    background: var(--sky-surface);
+    color: var(--sky-text-primary);
+    border-color: var(--sky-border);
+
+    &:hover {
+      background: var(--sky-surface-soft);
+      border-color: var(--sky-border-strong);
+    }
+  }
+
+  .sky-profile-pill-count {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--sky-text-secondary);
+  }
+
+  // --- View mode switch ---
+  .sky-view-switch {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .sky-view-switch-btn {
+    color: var(--sky-text-secondary);
+
+    &:hover { color: var(--sky-text-primary); }
+
+    &.active {
+      background: var(--sky-surface);
+      color: var(--sky-text-primary);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    }
+  }
+
+  // --- Buttons ---
+  .p-button {
+    &.p-button-secondary {
+      background: var(--sky-surface-soft);
+      border-color: var(--sky-border);
+      color: var(--sky-text-primary);
+    }
+
+    &.p-button-text {
+      color: var(--sky-text-primary);
+      &:hover { background: var(--sky-surface-soft) !important; }
+    }
+  }
+
+  // --- Inputs ---
+  .p-inputtext,
+  .p-multiselect,
+  .p-dropdown {
+    background: var(--sky-surface) !important;
+    color: var(--sky-text-primary) !important;
+    border-color: var(--sky-border-strong) !important;
+  }
+
+  .p-inputnumber-input,
+  .p-dropdown .p-dropdown-label,
+  .p-multiselect .p-multiselect-label {
+    color: var(--sky-text-primary);
+    background: var(--sky-surface);
+  }
+
+  .p-dropdown-panel,
+  .p-multiselect-panel {
+    background: var(--sky-surface);
+    border-color: var(--sky-border);
+    color: var(--sky-text-primary);
+
+    .p-dropdown-item,
+    .p-multiselect-item {
+      color: var(--sky-text-primary);
+
+      &:hover,
+      &.p-highlight {
+        background: var(--sky-surface-soft);
+      }
+    }
+  }
+
+  .sky-input {
+    background: var(--sky-surface);
+    color: var(--sky-text-primary);
+    border-color: var(--sky-border-strong);
+
+    &::placeholder { color: rgba(127, 169, 165, 0.55); }
+    &:hover        { border-color: rgba($sky-lagoon, 0.45); }
+  }
+
+  .sky-native-select {
+    background-color: var(--sky-surface);
+    color: var(--sky-text-primary);
+    border-color: var(--sky-border-strong);
+  }
+
+  // --- Dialogs ---
+  .p-dialog {
+    .p-dialog-header {
+      background: var(--sky-surface);
+      color: var(--sky-text-primary);
+      border-color: var(--sky-border);
+    }
+
+    .p-dialog-content {
+      background: var(--sky-surface);
+      color: var(--sky-text-primary);
+    }
+
+    .p-dialog-footer {
+      background: var(--sky-surface-soft);
+      border-color: var(--sky-border);
+    }
+  }
+
+  // --- Sidebar ---
+  .p-sidebar {
+    background: var(--sky-surface) !important;
+    .p-sidebar-header { border-color: var(--sky-border); }
+  }
+
+  // --- Progress bar ---
+  .p-progressbar {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  // --- Multi-select tokens / chips ---
+  .p-multiselect-token,
+  .p-chips-token {
+    background: var(--sky-surface-soft) !important;
+    color: var(--sky-text-primary) !important;
+  }
+
+  // --- FullCalendar ---
+  .fc {
+    --fc-border-color:              rgba(255, 255, 255, 0.09);
+    --fc-button-bg-color:           #152323;
+    --fc-button-border-color:       rgba(255, 255, 255, 0.14);
+    --fc-button-text-color:         #ddeae8;
+    --fc-button-hover-bg-color:     #1b2d2d;
+    --fc-button-hover-border-color: rgba(255, 255, 255, 0.2);
+    --fc-today-bg-color:            rgba(127, 179, 179, 0.1);
+    --fc-list-event-hover-bg-color: #1b2d2d;
+    --fc-event-bg-color:            #{$sky-lagoon-deep};
+    --fc-event-border-color:        #{$sky-lagoon-deep};
+
+    .fc-toolbar-title {
+      color: var(--sky-text-primary);
+    }
+
+    .fc-col-header-cell {
+      background: var(--sky-surface-soft);
+    }
+
+    .fc-daygrid-day-number,
+    .fc-col-header-cell-cushion {
+      color: var(--sky-text-primary);
+    }
+
+    .fc-timegrid-slot-label {
+      color: var(--sky-text-secondary);
+    }
+
+    .fc-list-day > th {
+      background: var(--sky-surface-soft) !important;
+      border-color: var(--sky-border) !important;
+    }
+
+    .fc-list-day-cushion {
+      background: var(--sky-surface-soft) !important;
+      color: var(--sky-text-primary);
+    }
+
+    .fc-list-event-title a { color: var(--sky-text-primary); }
+    .fc-list-event-time    { color: var(--sky-text-secondary); }
+    .fc-list-empty         { color: var(--sky-text-secondary); }
+  }
+
+  // --- Create-event form ---
+  .sky-create-form-header { border-color: var(--sky-border); }
+  .sky-create-form-title  { color: var(--sky-text-primary); }
+
+  .sky-create-form-footer {
+    background: var(--sky-surface-soft);
+    border-color: var(--sky-border);
+  }
+
+  // --- Mobile profile picker ---
+  .sky-mobile-profile-picker {
+    &__trigger {
+      background: var(--sky-surface);
+      color: var(--sky-text-primary);
+      border-color: var(--sky-border-strong);
+    }
+
+    &__label  { color: var(--sky-text-primary); }
+    &__chevron { color: var(--sky-text-secondary); }
+
+    &__panel {
+      background: var(--sky-surface);
+      border-color: var(--sky-border);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    }
+
+    &__option {
+      color: var(--sky-text-primary);
+      &:hover     { background: var(--sky-surface-soft); }
+      &.is-selected { background: rgba($sky-lagoon, 0.12); }
+    }
+
+    &__check { color: $sky-lagoon; }
+  }
+
+  // --- Event detail ---
+  .sky-event-detail-body { color: var(--sky-text-primary); }
+
+  .sky-event-map-panel {
+    background: var(--sky-surface-soft);
+    border-color: rgba($sky-lagoon, 0.2);
+  }
+
+  .sky-event-location {
+    background: rgba($sky-lagoon, 0.12);
+    border-color: rgba($sky-lagoon, 0.25);
+    color: $sky-lagoon;
+  }
+
+  // --- Person chips ---
+  .sky-person-chip {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--sky-text-primary);
+  }
+
+  // --- Empty states ---
+  .sky-empty-state {
+    color: var(--sky-text-secondary);
+    .pi { color: $sky-sage-deep; }
+  }
+
+  // --- Field labels ---
+  .sky-field-label { color: var(--sky-text-secondary); }
+
+  .sky-field.sky-field-inline { color: var(--sky-text-primary); }
+
+  // --- Form errors ---
+  .sky-form-error {
+    background: rgba($sky-coral, 0.2);
+    border-color: rgba($sky-coral, 0.4);
+    color: $sky-coral;
   }
 }
