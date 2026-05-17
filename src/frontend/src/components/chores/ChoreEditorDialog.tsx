@@ -122,6 +122,7 @@ interface ChoreEditorDialogProps {
   visible: boolean
   profiles: Profile[]
   initialChore?: Chore | null
+  defaultAssignedProfileIds?: string[]
   defaultDate?: Date
   /** When true, exposes the star value field. Defaults to false. */
   allowEditStarValue?: boolean
@@ -145,6 +146,7 @@ const ChoreEditorDialog: React.FC<ChoreEditorDialogProps> = ({
   visible,
   profiles,
   initialChore,
+  defaultAssignedProfileIds,
   defaultDate,
   allowEditStarValue = false,
   onClose,
@@ -176,16 +178,19 @@ const ChoreEditorDialog: React.FC<ChoreEditorDialogProps> = ({
       setDaysOfWeek(initialChore.recurrenceDaysOfWeek ?? [])
       setEndDate(initialChore.recurrenceEndDate ? fromDateKey(initialChore.recurrenceEndDate) : null)
     } else {
+      const validDefaultIds = (defaultAssignedProfileIds ?? []).filter(id =>
+        profiles.some(p => p.id === id)
+      )
       setTitle('')
       setDescription('')
-      setAssignedProfileIds([])
+      setAssignedProfileIds(validDefaultIds)
       setStarValue(1)
       setDueDate(defaultDate ?? new Date())
       setRecurrence('None')
       setDaysOfWeek([])
       setEndDate(null)
     }
-  }, [visible, initialChore, defaultDate, profiles])
+  }, [visible, initialChore, defaultAssignedProfileIds, defaultDate, profiles])
 
   const canSave = title.trim().length > 0 && assignedProfileIds.length > 0 && !!dueDate &&
     (recurrence !== 'Weekly' || daysOfWeek.length > 0)

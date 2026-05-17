@@ -127,6 +127,7 @@ const AdminPage: React.FC = () => {
   // Chore editor dialog state
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingChore, setEditingChore] = useState<Chore | null>(null)
+  const [createDefaultProfileIds, setCreateDefaultProfileIds] = useState<string[]>([])
 
   const filteredChores = useMemo(
     () => (selectedProfileId ? chores.filter(c => c.assignedProfileId === selectedProfileId) : chores),
@@ -270,11 +271,13 @@ const AdminPage: React.FC = () => {
 
   const openCreateChore = () => {
     setEditingChore(null)
+    setCreateDefaultProfileIds(selectedProfileId ? [selectedProfileId] : [])
     setEditorOpen(true)
   }
 
   const openEditChore = (chore: Chore) => {
     setEditingChore(chore)
+    setCreateDefaultProfileIds([])
     setEditorOpen(true)
   }
 
@@ -1192,8 +1195,12 @@ const AdminPage: React.FC = () => {
         visible={editorOpen}
         profiles={profiles}
         initialChore={editingChore}
+        defaultAssignedProfileIds={createDefaultProfileIds}
         allowEditStarValue
-        onClose={() => setEditorOpen(false)}
+        onClose={() => {
+          setEditorOpen(false)
+          setCreateDefaultProfileIds([])
+        }}
         onCreate={async payload => { await createChore(payload) }}
         onUpdate={async (id, payload) => { await updateChore(id, payload) }}
         onDelete={handleDeleteChore}
