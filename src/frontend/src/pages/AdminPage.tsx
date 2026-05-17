@@ -940,6 +940,7 @@ const AdminPage: React.FC = () => {
             icon="pi pi-plus"
             onClick={openCreateChore}
             disabled={profiles.length === 0}
+            style={{ marginLeft: 'auto' }}
           />
         </header>
 
