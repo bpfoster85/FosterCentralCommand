@@ -4,11 +4,10 @@ import { useState } from 'react'
  * Decide whether the app should render its own on-screen keyboard.
  *
  * Strategy:
- *  - Phones / tablets (mobile UA) already get a native keyboard from the OS,
- *    so we return false and let the platform handle it.
- *  - Touch-capable devices with a desktop UA (Windows kiosk PC driving a
- *    wall-mounted touchscreen, for example) won't auto-pop a keyboard, so we
- *    render our own.
+ *  - Any touch-capable device (coarse primary pointer OR any coarse pointer)
+ *    gets the on-screen keyboard.  This covers kiosk PCs with wall-mounted
+ *    touchscreens, Windows tablets, iPads, and Android tablets used as fixed
+ *    displays.
  *  - The result can be forced on/off via `localStorage.virtualKeyboard`
  *    (`'force'` or `'off'`) for testing on a regular desktop.
  *
@@ -24,17 +23,14 @@ export function useNeedsVirtualKeyboard(): boolean {
     if (override === 'force') return true
     if (override === 'off') return false
 
-    const ua = navigator.userAgent
-    const isMobileUA = /Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(ua)
-    if (isMobileUA) return false
-
     const coarse = window.matchMedia('(pointer: coarse)').matches
     const anyCoarse = window.matchMedia('(any-pointer: coarse)').matches
 
-    // Desktop UA + any touch-capable pointer = kiosk-style touchscreen.
-    // We use `anyCoarse` alone (without requiring no-hover) so that a 4K
-    // wall-mounted display connected to a PC with a mouse still gets the
-    // keyboard when the user touches the screen.
+    // Show the on-screen keyboard for any touch-capable device — kiosk PC,
+    // wall-mounted touchscreen, or tablet — so the user can type without a
+    // physical keyboard.  We intentionally skip the mobile-UA heuristic
+    // because tablets (iPad, Android) are also used as fixed kiosk displays
+    // and still need this keyboard.
     return coarse || anyCoarse
   })
 
