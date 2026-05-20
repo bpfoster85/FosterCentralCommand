@@ -52,7 +52,9 @@ const ChoresPage: React.FC = () => {
 
   const handleToggle = async (chore: Chore, date: Date) => {
     await toggleCompleteOnDate(chore.id, toDateKey(date))
-    refetchProfiles()
+    // Silent refetch — flipping profilesLoading would unmount ChoresDayView
+    // (and the CelebrationOverlay it owns) mid-animation.
+    refetchProfiles(true)
   }
 
   return (

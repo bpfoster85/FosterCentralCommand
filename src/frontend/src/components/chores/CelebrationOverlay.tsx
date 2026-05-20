@@ -158,8 +158,9 @@ const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
 
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-      // Schedule fireworks every ~600 ms for first 2.5 s
-      if (now > nextFireworkRef.current && elapsed < duration * 0.7) {
+      // Keep spawning fireworks until ~1.5 s before the end so the final burst
+      // has time to expand and fade before the overlay tears down.
+      if (now > nextFireworkRef.current && remaining > 1500) {
         fireworksRef.current.push(createFirework(canvas))
         nextFireworkRef.current = now + randomBetween(400, 800)
       }
@@ -213,7 +214,9 @@ const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
           p.opacity = 1
         }
 
-        if (elapsed > duration * 0.6) {
+        // Hold confetti at full opacity until the very end, then fade out
+        // alongside the global fadeFraction in the final 800 ms.
+        if (remaining < 1200) {
           p.opacity = Math.max(0, p.opacity - 0.012)
         }
 

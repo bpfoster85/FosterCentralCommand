@@ -422,14 +422,17 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-// Larger, easier-to-tap chore checkboxes
+// Wider (not taller) chore checkboxes — easier to tap without changing row height.
 .sky-chore-checkbox.p-checkbox {
   display: inline-flex;
   padding: 0.1rem;
+  width: 3rem;
 
   .p-checkbox-box {
-    width: 1.5rem;
+    width: 3rem;
     height: 1.5rem;
+    border-width: 2px;
+    border-radius: 6px;
   }
 
   .p-checkbox-icon {
@@ -439,8 +442,8 @@ h1, h2, h3, h4, h5, h6 {
 
 // Give chore checkbox column extra room so it takes two "spaces" in the row.
 .sky-chore-checkbox-cell {
-  flex: 0 0 3rem;
-  min-width: 3rem;
+  flex: 0 0 4rem;
+  min-width: 4rem;
   flex-shrink: 0;
   padding: 0.2rem;
   display: inline-flex;
@@ -2218,5 +2221,15 @@ html[data-theme="dark"] {
     background: rgba($sky-coral, 0.2);
     border-color: rgba($sky-coral, 0.4);
     color: $sky-coral;
+  }
+
+  // --- Chores section ---
+  // The chore columns/cards are tinted from each profile color toward white
+  // (see `tint()` in ChoresDayView), so they stay light pastel even in dark
+  // mode. Force the text inside back to a darker grey so it stays legible
+  // against those pastel backgrounds.
+  .sky-chores-day-grid {
+    color: #2d3436;
+    --sky-text-secondary: #57636c;
   }
 }
