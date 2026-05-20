@@ -7,7 +7,10 @@ namespace FosterCentralCommand.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ChoresController(IChoreRepository choreRepo, IProfileRepository profileRepo) : ControllerBase
+public class ChoresController(
+    IChoreRepository choreRepo,
+    IProfileRepository profileRepo,
+    IStarLedgerRepository ledgerRepo) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ChoreDto>>> GetAll([FromQuery] Guid? profileId = null)
@@ -113,6 +116,19 @@ public class ChoresController(IChoreRepository choreRepo, IProfileRepository pro
                     profile.TotalStars = Math.Max(0, profile.TotalStars - chore.StarValue);
                     profile.UpdatedAt = DateTime.UtcNow;
                     await profileRepo.UpdateAsync(profile);
+
+                    await ledgerRepo.AppendAsync(new StarLedgerEntry
+                    {
+                        ProfileId = profile.Id,
+                        ProfileName = profile.Name,
+                        ProfileColor = profile.Color,
+                        Delta = -chore.StarValue,
+                        Reason = StarLedgerReason.ChoreUncompleted,
+                        SourceType = StarLedgerSourceType.Chore,
+                        SourceId = chore.Id,
+                        SourceTitle = chore.Title,
+                        OccurrenceDate = key,
+                    });
                 }
             }
         }
@@ -161,6 +177,19 @@ public class ChoresController(IChoreRepository choreRepo, IProfileRepository pro
             profile.TotalStars = Math.Max(0, profile.TotalStars + delta);
             profile.UpdatedAt = DateTime.UtcNow;
             await profileRepo.UpdateAsync(profile);
+
+            await ledgerRepo.AppendAsync(new StarLedgerEntry
+            {
+                ProfileId = profile.Id,
+                ProfileName = profile.Name,
+                ProfileColor = profile.Color,
+                Delta = delta,
+                Reason = wasApproved ? StarLedgerReason.ChoreUnapproved : StarLedgerReason.ChoreApproved,
+                SourceType = StarLedgerSourceType.Chore,
+                SourceId = chore.Id,
+                SourceTitle = chore.Title,
+                OccurrenceDate = key,
+            });
         }
 
         var updated = await choreRepo.UpdateAsync(chore);

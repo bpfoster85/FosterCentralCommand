@@ -7,7 +7,9 @@ namespace FosterCentralCommand.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ProfilesController(IProfileRepository profileRepo) : ControllerBase
+public class ProfilesController(
+    IProfileRepository profileRepo,
+    IStarLedgerRepository ledgerRepo) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ProfileDto>>> GetAll()
@@ -83,9 +85,28 @@ public class ProfilesController(IProfileRepository profileRepo) : ControllerBase
         var profile = await profileRepo.GetByIdAsync(id.ToString());
         if (profile == null) return NotFound();
 
+        // Clamp negative deltas so we don't overdraw — record the actual change applied.
+        var before = profile.TotalStars;
         profile.TotalStars = Math.Max(0, profile.TotalStars + request.Delta);
+        var applied = profile.TotalStars - before;
         profile.UpdatedAt = DateTime.UtcNow;
         var updated = await profileRepo.UpdateAsync(profile);
+
+        if (applied != 0)
+        {
+            var isCustomAward = applied > 0;
+            await ledgerRepo.AppendAsync(new StarLedgerEntry
+            {
+                ProfileId = profile.Id,
+                ProfileName = profile.Name,
+                ProfileColor = profile.Color,
+                Delta = applied,
+                Reason = isCustomAward ? StarLedgerReason.CustomAward : StarLedgerReason.ManualAdjustment,
+                SourceType = StarLedgerSourceType.Manual,
+                SourceTitle = isCustomAward ? "Custom star award" : "Manual adjustment",
+            });
+        }
+
         return Ok(MapToDto(updated));
     }
 

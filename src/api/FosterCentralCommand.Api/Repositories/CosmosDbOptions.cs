@@ -12,4 +12,5 @@ public class CosmosDbOptions
     public string GoalsContainer { get; set; } = "goals";
     public string ChoresContainer { get; set; } = "chores";
     public string FamiliesContainer { get; set; } = "families";
+    public string StarLedgerContainer { get; set; } = "starLedger";
 }

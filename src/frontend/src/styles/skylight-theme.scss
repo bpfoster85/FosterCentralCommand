@@ -992,6 +992,182 @@ textarea.p-inputtext,
   }
 }
 
+// =============================================================================
+// Goals Audit Log
+// =============================================================================
+.sky-audit-fab {
+  position: fixed !important;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 1400;
+  border-radius: $sky-radius-pill !important;
+  box-shadow: $sky-shadow-md;
+}
+
+.sky-audit-empty {
+  border: 1px dashed $sky-border;
+  border-radius: $sky-radius-md;
+  padding: 1rem;
+  text-align: center;
+  color: $sky-text-secondary;
+}
+
+.sky-audit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-height: min(65vh, 560px);
+  overflow: auto;
+  padding-right: 0.25rem;
+}
+
+.sky-audit-filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.sky-audit-filter-pill {
+  appearance: none;
+  border: 1px solid $sky-border;
+  background: $sky-surface;
+  color: $sky-text-secondary;
+  border-radius: $sky-radius-pill;
+  padding: 0.32rem 0.72rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: $sky-lagoon;
+    color: $sky-text-primary;
+  }
+
+  &.active {
+    background: $sky-lagoon-deep;
+    border-color: $sky-lagoon-deep;
+    color: #fff;
+  }
+}
+
+.sky-audit-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  border: 1px solid $sky-border;
+  border-radius: $sky-radius-md;
+  padding: 0.65rem 0.7rem;
+  background: $sky-surface;
+}
+
+.sky-audit-delta {
+  min-width: 3.2rem;
+  text-align: center;
+  border-radius: $sky-radius-pill;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 0.35rem 0.5rem;
+
+  &.positive {
+    background: rgba($sky-sage-deep, 0.15);
+    color: color.adjust($sky-sage-deep, $lightness: -8%);
+  }
+
+  &.negative {
+    background: rgba($sky-coral, 0.15);
+    color: color.adjust($sky-coral, $lightness: -18%);
+  }
+}
+
+.sky-audit-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.sky-audit-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+
+  i {
+    color: $sky-lagoon-deep;
+  }
+}
+
+.sky-audit-title {
+  font-weight: 700;
+  color: $sky-text-primary;
+}
+
+.sky-audit-time {
+  margin-left: auto;
+  color: $sky-text-secondary;
+  font-size: 0.8rem;
+}
+
+.sky-audit-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.35rem;
+  color: $sky-text-secondary;
+  font-size: 0.86rem;
+}
+
+.sky-audit-profile-chip {
+  border-radius: $sky-radius-pill;
+  padding: 0.18rem 0.55rem;
+  color: rgba($sky-charcoal, 0.92);
+  font-weight: 700;
+}
+
+.sky-audit-source {
+  color: $sky-text-primary;
+  font-weight: 600;
+}
+
+html[data-theme='dark'] {
+  .sky-audit-filter-pill {
+    border-color: rgba(233, 240, 240, 0.18);
+    background: rgba(255, 255, 255, 0.03);
+    color: #b8c5cf;
+
+    &:hover {
+      border-color: #7cb4cb;
+      color: #e7f0f5;
+    }
+
+    &.active {
+      background: #2d5b75;
+      border-color: #2d5b75;
+      color: #fff;
+    }
+  }
+
+  .sky-audit-empty,
+  .sky-audit-item {
+    border-color: rgba(233, 240, 240, 0.16);
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .sky-audit-title,
+  .sky-audit-source {
+    color: #dfe7eb;
+  }
+
+  .sky-audit-time,
+  .sky-audit-detail-row {
+    color: #9dafbb;
+  }
+
+  .sky-audit-profile-chip {
+    color: #1f2a32;
+  }
+}
+
 .sky-day-tile-header {
   display: flex;
   align-items: baseline;

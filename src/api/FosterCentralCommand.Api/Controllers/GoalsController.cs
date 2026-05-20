@@ -7,7 +7,10 @@ namespace FosterCentralCommand.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class GoalsController(IGoalRepository goalRepo, IProfileRepository profileRepo) : ControllerBase
+public class GoalsController(
+    IGoalRepository goalRepo,
+    IProfileRepository profileRepo,
+    IStarLedgerRepository ledgerRepo) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IEnumerable<GoalDto>>> GetAll([FromQuery] Guid? profileId = null)
@@ -93,6 +96,19 @@ public class GoalsController(IGoalRepository goalRepo, IProfileRepository profil
         goal.StarsApplied += request.Amount;
         goal.UpdatedAt = DateTime.UtcNow;
         var updated = await goalRepo.UpdateAsync(goal);
+
+        await ledgerRepo.AppendAsync(new StarLedgerEntry
+        {
+            ProfileId = profile.Id,
+            ProfileName = profile.Name,
+            ProfileColor = profile.Color,
+            Delta = -request.Amount,
+            Reason = StarLedgerReason.GoalSpent,
+            SourceType = StarLedgerSourceType.Goal,
+            SourceId = goal.Id,
+            SourceTitle = goal.Title,
+        });
+
         return Ok(MapToDto(updated));
     }
 

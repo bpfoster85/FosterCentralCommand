@@ -5,8 +5,10 @@ import { ProgressBar } from 'primereact/progressbar'
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog'
 import { useProfiles } from '../hooks/useProfiles'
 import { useGoals } from '../hooks/useGoals'
+import { useStarLedger } from '../hooks/useStarLedger'
 import GoalCard from '../components/chores/GoalCard'
 import CelebrationOverlay from '../components/chores/CelebrationOverlay'
+import StarAuditDialog from '../components/goals/StarAuditDialog'
 import type { Goal, Profile } from '../types'
 import { getContrastText, getProfileAvatarOverlay } from '../utils/colors'
 import { isHiddenChoreProfile } from '../utils/profileOrder'
@@ -16,6 +18,7 @@ const GoalsPage: React.FC = () => {
 
   // Load all goals (no profileId filter) so we can group by profile on screen.
   const { goals, loading: goalsLoading, deleteGoal, spendStars, winGoal, refetch: refetchGoals } = useGoals()
+  const { entries: auditEntries, loading: auditLoading, error: auditError, refetch: refetchAudit } = useStarLedger()
 
   // Spend stars dialog — tracks which goal and which profile's stars to use.
   const [spendDialogGoal, setSpendDialogGoal] = useState<Goal | null>(null)
@@ -28,6 +31,8 @@ const GoalsPage: React.FC = () => {
 
   // Celebration
   const [celebration, setCelebration] = useState<{ active: boolean; message: string }>({ active: false, message: '' })
+  const [auditOpen, setAuditOpen] = useState(false)
+  const [auditProfileId, setAuditProfileId] = useState<string | null>(null)
 
   const handleDeleteGoal = (goal: Goal) => {
     confirmDialog({
@@ -49,9 +54,22 @@ const GoalsPage: React.FC = () => {
     if (!spendDialogGoal || !spendDialogProfile || spendAmount < 1) return
     await spendStars(spendDialogGoal.id, spendDialogProfile.id, spendAmount)
     refetchProfiles()
+    if (auditOpen) {
+      refetchAudit(true, auditProfileId)
+    }
     setSpendDialogGoal(null)
     setSpendDialogProfile(null)
     setCelebration({ active: true, message: `${spendAmount} ⭐ added to "${spendDialogGoal.title}"!` })
+  }
+
+  const handleOpenAudit = async () => {
+    setAuditOpen(true)
+    await refetchAudit(false, auditProfileId)
+  }
+
+  const handleAuditProfileChange = async (profileId: string | null) => {
+    setAuditProfileId(profileId)
+    await refetchAudit(false, profileId)
   }
 
   const handleWinAward = async (goal: Goal) => {
@@ -293,6 +311,26 @@ const GoalsPage: React.FC = () => {
           </div>
         </Dialog>
       )}
+
+      <Button
+        label="Audit"
+        icon="pi pi-history"
+        className="sky-audit-fab"
+        onClick={handleOpenAudit}
+        aria-label="Open star audit log"
+      />
+
+      <StarAuditDialog
+        visible={auditOpen}
+        entries={auditEntries}
+        loading={auditLoading}
+        error={auditError}
+        profiles={visibleProfiles}
+        selectedProfileId={auditProfileId}
+        onProfileChange={handleAuditProfileChange}
+        onHide={() => setAuditOpen(false)}
+        onRefresh={() => refetchAudit(false, auditProfileId)}
+      />
     </div>
   )
 }

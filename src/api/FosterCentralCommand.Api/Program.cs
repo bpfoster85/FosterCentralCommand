@@ -69,6 +69,7 @@ builder.Services.AddScoped<CosmosProfileRepository>();
 builder.Services.AddScoped<CosmosShoppingListRepository>();
 builder.Services.AddScoped<CosmosGoalRepository>();
 builder.Services.AddScoped<CosmosChoreRepository>();
+builder.Services.AddScoped<IStarLedgerRepository, CosmosStarLedgerRepository>();
 
 builder.Services.AddScoped<IProfileRepository>(sp => new CachedProfileRepository(
     sp.GetRequiredService<CosmosProfileRepository>(),

@@ -12,7 +12,7 @@ public class ProfilesControllerTests
     public async Task GetById_ReturnsNotFound_WhenProfileDoesNotExist()
     {
         var repo = new FakeProfileRepository();
-        var controller = new ProfilesController(repo);
+        var controller = new ProfilesController(repo, new FakeStarLedgerRepository());
 
         var result = await controller.GetById(Guid.NewGuid());
 
@@ -24,7 +24,7 @@ public class ProfilesControllerTests
     {
         var existing = new Profile { Name = "Sam", Email = "sam@example.com" };
         var repo = new FakeProfileRepository { ExistingByEmail = existing };
-        var controller = new ProfilesController(repo);
+        var controller = new ProfilesController(repo, new FakeStarLedgerRepository());
 
         var result = await controller.Create(new CreateProfileRequest("Test", "sam@example.com"));
 
@@ -45,7 +45,7 @@ public class ProfilesControllerTests
         };
 
         var repo = new FakeProfileRepository { CreateResult = created };
-        var controller = new ProfilesController(repo);
+        var controller = new ProfilesController(repo, new FakeStarLedgerRepository());
 
         var result = await controller.Create(new CreateProfileRequest("Taylor", "taylor@example.com", "#FFFFFF", null));
 
@@ -80,5 +80,17 @@ public class ProfilesControllerTests
 
         public Task<Profile> UpdateAsync(Profile profile)
             => Task.FromResult(profile);
+    }
+
+    private sealed class FakeStarLedgerRepository : IStarLedgerRepository
+    {
+        public Task<StarLedgerEntry> AppendAsync(StarLedgerEntry entry)
+            => Task.FromResult(entry);
+
+        public Task<IEnumerable<StarLedgerEntry>> GetRecentAsync(int limit)
+            => Task.FromResult(Enumerable.Empty<StarLedgerEntry>());
+
+        public Task<IEnumerable<StarLedgerEntry>> GetRecentByProfileAsync(string profileId, int limit)
+            => Task.FromResult(Enumerable.Empty<StarLedgerEntry>());
     }
 }

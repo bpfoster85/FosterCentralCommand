@@ -88,3 +88,28 @@ export interface Chore {
   createdAt: string
   updatedAt: string
 }
+
+export type StarLedgerReason =
+  | 'ChoreApproved'
+  | 'ChoreUnapproved'
+  | 'ChoreUncompleted'
+  | 'GoalSpent'
+  | 'CustomAward'
+  | 'ManualAdjustment'
+
+export type StarLedgerSourceType = 'Chore' | 'Goal' | 'Manual'
+
+export interface StarLedgerEntry {
+  id: string
+  profileId: string
+  profileName: string
+  profileColor: string
+  delta: number
+  reason: StarLedgerReason
+  sourceType: StarLedgerSourceType
+  sourceId?: string | null
+  sourceTitle: string
+  occurrenceDate?: string | null
+  note?: string | null
+  createdAt: string
+}
