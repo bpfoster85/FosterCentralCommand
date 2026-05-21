@@ -38,15 +38,13 @@ body,
   color: var(--sky-text-primary);
 }
 
-// Kiosk/touchscreen: hide the mouse pointer so it doesn't trail finger taps.
-// `hover: none` matches devices whose primary input can't hover (touchscreens),
-// leaving the cursor visible on dev machines with a real mouse.
-@media (hover: none) {
-  html,
-  body,
-  * {
-    cursor: none !important;
-  }
+// Production kiosk: hide the mouse cursor so it doesn't trail finger taps on
+// the touchscreen. In dev (`vite dev`), `main.tsx` sets data-env="dev" on
+// <html> so the cursor stays visible while developing.
+html[data-env='prod'],
+html[data-env='prod'] body,
+html[data-env='prod'] * {
+  cursor: none !important;
 }
 
 .fullscreen-container {

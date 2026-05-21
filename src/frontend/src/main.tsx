@@ -9,6 +9,10 @@ import 'primeflex/primeflex.css'
 import './styles/skylight-theme.scss'
 import './index.scss'
 
+// Tag the document so CSS can show the mouse cursor in dev and hide it in
+// production (the wall-mounted dashboard is touch-first).
+document.documentElement.dataset.env = import.meta.env.DEV ? 'dev' : 'prod'
+
 registerSW({ immediate: true })
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
