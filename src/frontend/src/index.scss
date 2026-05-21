@@ -9,6 +9,22 @@
   margin: 0;
   padding: 0;
   -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+// Keep editable surfaces selectable so the caret and text selection still work.
+input,
+textarea,
+select,
+[contenteditable='true'],
+[contenteditable='']  {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
 }
 
 html,
@@ -20,6 +36,17 @@ body,
   font-family: $sky-font-family;
   background-color: var(--sky-bg);
   color: var(--sky-text-primary);
+}
+
+// Kiosk/touchscreen: hide the mouse pointer so it doesn't trail finger taps.
+// `hover: none` matches devices whose primary input can't hover (touchscreens),
+// leaving the cursor visible on dev machines with a real mouse.
+@media (hover: none) {
+  html,
+  body,
+  * {
+    cursor: none !important;
+  }
 }
 
 .fullscreen-container {
