@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { ProgressBar } from 'primereact/progressbar'
 import { useChores } from '../../hooks/useChores'
 import ChoresDayView from '../chores/ChoresDayView'
@@ -16,16 +16,77 @@ const TODAY_FORMAT: Intl.DateTimeFormatOptions = {
   day: 'numeric',
 }
 
+const DAILY_REFRESH_HOUR = 4
+
+const getDashboardChoreDate = (now: Date): Date => {
+  const day = new Date(now)
+  if (day.getHours() < DAILY_REFRESH_HOUR) day.setDate(day.getDate() - 1)
+  day.setHours(0, 0, 0, 0)
+  return day
+}
+
+const getNextRefreshTime = (now: Date): Date => {
+  const next = new Date(now)
+  next.setHours(DAILY_REFRESH_HOUR, 0, 0, 0)
+  if (now >= next) next.setDate(next.getDate() + 1)
+  return next
+}
+
 const ChoresDashboardWidget: React.FC<ChoresDashboardWidgetProps> = ({ profiles }) => {
-  const { chores, loading, toggleCompleteOnDate } = useChores()
+  const { chores, loading, refetch, toggleCompleteOnDate } = useChores()
 
   const orderedProfiles = useMemo(() => sortProfilesForChores(profiles), [profiles])
 
-  const today = useMemo(() => {
-    const d = new Date()
-    d.setHours(0, 0, 0, 0)
-    return d
-  }, [])
+  const [today, setToday] = useState<Date>(() => getDashboardChoreDate(new Date()))
+  const todayRef = useRef(today)
+
+  useEffect(() => {
+    todayRef.current = today
+  }, [today])
+
+  useEffect(() => {
+    let disposed = false
+    let refreshTimerId: ReturnType<typeof window.setTimeout> | undefined
+
+    const runDailyRefresh = async () => {
+      if (disposed) return
+      setToday(getDashboardChoreDate(new Date()))
+      await refetch(true)
+      if (disposed) return
+      scheduleDailyRefresh()
+    }
+
+    const scheduleDailyRefresh = () => {
+      if (disposed) return
+      if (refreshTimerId !== undefined) window.clearTimeout(refreshTimerId)
+      const now = new Date()
+      const nextRefresh = getNextRefreshTime(now)
+      const delay = Math.max(0, nextRefresh.getTime() - now.getTime())
+
+      refreshTimerId = window.setTimeout(() => { void runDailyRefresh() }, delay)
+    }
+
+    scheduleDailyRefresh()
+
+    const handleVisibilityChange = () => {
+      if (disposed || document.hidden) return
+      if (refreshTimerId !== undefined) {
+        window.clearTimeout(refreshTimerId)
+        refreshTimerId = undefined
+      }
+      const currentDay = getDashboardChoreDate(new Date())
+      if (currentDay.getTime() !== todayRef.current.getTime()) void runDailyRefresh()
+      else scheduleDailyRefresh()
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      disposed = true
+      if (refreshTimerId !== undefined) window.clearTimeout(refreshTimerId)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [refetch])
 
   const handleToggle = async (chore: Chore, date: Date) => {
     await toggleCompleteOnDate(chore.id, toDateKey(date))
