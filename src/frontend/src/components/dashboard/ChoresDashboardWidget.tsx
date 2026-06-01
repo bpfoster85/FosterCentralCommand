@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { ProgressBar } from 'primereact/progressbar'
 import { useChores } from '../../hooks/useChores'
 import ChoresDayView from '../chores/ChoresDayView'
@@ -38,26 +38,53 @@ const ChoresDashboardWidget: React.FC<ChoresDashboardWidgetProps> = ({ profiles 
   const orderedProfiles = useMemo(() => sortProfilesForChores(profiles), [profiles])
 
   const [today, setToday] = useState<Date>(() => getDashboardChoreDate(new Date()))
+  const todayRef = useRef(today)
 
   useEffect(() => {
-    let refreshTimerId: number | undefined
+    todayRef.current = today
+  }, [today])
+
+  useEffect(() => {
+    let disposed = false
+    let refreshTimerId: ReturnType<typeof window.setTimeout> | undefined
+
+    const runDailyRefresh = async () => {
+      if (disposed) return
+      setToday(getDashboardChoreDate(new Date()))
+      await refetch(true)
+      if (disposed) return
+      scheduleDailyRefresh()
+    }
 
     const scheduleDailyRefresh = () => {
+      if (disposed) return
+      if (refreshTimerId !== undefined) window.clearTimeout(refreshTimerId)
       const now = new Date()
       const nextRefresh = getNextRefreshTime(now)
       const delay = Math.max(0, nextRefresh.getTime() - now.getTime())
 
-      refreshTimerId = window.setTimeout(async () => {
-        setToday(getDashboardChoreDate(new Date()))
-        await refetch(true)
-        scheduleDailyRefresh()
-      }, delay)
+      refreshTimerId = window.setTimeout(() => { void runDailyRefresh() }, delay)
     }
 
     scheduleDailyRefresh()
 
+    const handleVisibilityChange = () => {
+      if (disposed || document.hidden) return
+      if (refreshTimerId !== undefined) {
+        window.clearTimeout(refreshTimerId)
+        refreshTimerId = undefined
+      }
+      const currentDay = getDashboardChoreDate(new Date())
+      if (currentDay.getTime() !== todayRef.current.getTime()) void runDailyRefresh()
+      else scheduleDailyRefresh()
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     return () => {
-      if (refreshTimerId != null) window.clearTimeout(refreshTimerId)
+      disposed = true
+      if (refreshTimerId !== undefined) window.clearTimeout(refreshTimerId)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [refetch])
 
