@@ -222,21 +222,21 @@ const AppShell: React.FC = () => {
           ))}
           <button
             className="sky-nav-tab sky-nav-tab--theme-toggle"
-            onClick={() => { void handleHardRefresh() }}
-            title="Hard refresh and clear cached data"
-            aria-label="Hard refresh and clear cached data"
-            disabled={isRefreshing}
-          >
-            <i className={`pi ${isRefreshing ? 'pi-spin pi-spinner' : 'pi-refresh'}`} />
-          </button>
-          <button
-            className="sky-nav-tab sky-nav-tab--theme-toggle"
             onClick={toggleTheme}
             title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             style={{ marginLeft: 'auto' }}
           >
             <i className={theme === 'dark' ? 'pi pi-sun' : 'pi pi-moon'} />
+          </button>
+          <button
+            className="sky-nav-tab sky-nav-tab--theme-toggle"
+            onClick={() => { void handleHardRefresh() }}
+            title="Hard refresh and clear cached data"
+            aria-label="Hard refresh and clear cached data"
+            disabled={isRefreshing}
+          >
+            <i className={`pi ${isRefreshing ? 'pi-spin pi-spinner' : 'pi-refresh'}`} />
           </button>
           <button
             className="sky-nav-tab"
@@ -269,19 +269,19 @@ const AppShell: React.FC = () => {
           <button
             role="menuitem"
             className="sky-nav-mobile-item"
+            onClick={toggleTheme}
+          >
+            <i className={theme === 'dark' ? 'pi pi-sun' : 'pi pi-moon'} />
+            <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+          </button>
+          <button
+            role="menuitem"
+            className="sky-nav-mobile-item"
             onClick={() => { void handleHardRefresh() }}
             disabled={isRefreshing}
           >
             <i className={`pi ${isRefreshing ? 'pi-spin pi-spinner' : 'pi-refresh'}`} />
             <span>{refreshLabel}</span>
-          </button>
-          <button
-            role="menuitem"
-            className="sky-nav-mobile-item"
-            onClick={toggleTheme}
-          >
-            <i className={theme === 'dark' ? 'pi pi-sun' : 'pi pi-moon'} />
-            <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
           </button>
           <button
             role="menuitem"
