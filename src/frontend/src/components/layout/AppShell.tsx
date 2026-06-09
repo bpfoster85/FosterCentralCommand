@@ -168,6 +168,7 @@ const AppShell: React.FC = () => {
         await Promise.allSettled(cacheKeys.map(cacheName => caches.delete(cacheName)))
       }
     } finally {
+      setIsRefreshing(false)
       window.location.reload()
     }
   }
