@@ -7,13 +7,19 @@ const DadsSwearJarWidget: React.FC = () => {
   const [count, setCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
     const load = async () => {
       try {
         const data = await getDadsSwearJar()
-        if (mounted) setCount(data.count)
+        if (mounted) {
+          setCount(data.count)
+          setError(null)
+        }
+      } catch {
+        if (mounted) setError('Unable to load count.')
       } finally {
         if (mounted) setLoading(false)
       }
@@ -29,6 +35,9 @@ const DadsSwearJarWidget: React.FC = () => {
     try {
       const data = await addDadsSwearJar(1)
       setCount(data.count)
+      setError(null)
+    } catch {
+      setError('Unable to update count.')
     } finally {
       setUpdating(false)
     }
@@ -49,7 +58,10 @@ const DadsSwearJarWidget: React.FC = () => {
         {loading ? (
           <ProgressBar mode="indeterminate" style={{ height: '4px' }} />
         ) : (
-          <div style={{ fontSize: '2rem', fontWeight: 700, lineHeight: 1.1 }}>{count}</div>
+          <>
+            <div style={{ fontSize: '2rem', fontWeight: 700, lineHeight: 1.1 }}>{count}</div>
+            {error && <div style={{ color: 'var(--red-500)', fontSize: '0.9rem' }}>{error}</div>}
+          </>
         )}
         <Button label="Add" icon="pi pi-plus" onClick={handleAdd} disabled={loading || updating} />
       </div>
