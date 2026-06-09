@@ -197,6 +197,12 @@ using (var scope = app.Services.CreateScope())
         await BackfillFamilyIdAsync<Profile>(database.GetContainer(options.ProfilesContainer), defaultFamilyId, logger);
         await BackfillFamilyIdAsync<Goal>(database.GetContainer(options.GoalsContainer), defaultFamilyId, logger);
         await BackfillFamilyIdAsync<ShoppingList>(database.GetContainer(options.ShoppingListsContainer), defaultFamilyId, logger);
+
+        await SeedChoresAsync(
+            database.GetContainer(options.ChoresContainer),
+            database.GetContainer(options.ProfilesContainer),
+            defaultFamilyId,
+            logger);
     }
 }
 
@@ -234,4 +240,95 @@ static async Task BackfillFamilyIdAsync<T>(Container container, string defaultFa
             "Backfilled FamilyId on {Count} {Container} record(s) → family {FamilyId}.",
             migrated, container.Id, defaultFamilyId);
     }
+}
+
+// Idempotent chore seed: creates default chores for known profiles if they
+// do not already exist (matched by title + assignedProfileId).
+static async Task SeedChoresAsync(
+    Container choresContainer,
+    Container profilesContainer,
+    string familyId,
+    ILogger logger)
+{
+    // Load all profiles for this family.
+    var profileQuery = new QueryDefinition("SELECT c.id, c.name FROM c WHERE c.familyId = @fid")
+        .WithParameter("@fid", familyId);
+    using var profileIterator = profilesContainer.GetItemQueryIterator<dynamic>(profileQuery);
+    var profiles = new List<(string Id, string Name)>();
+    while (profileIterator.HasMoreResults)
+    {
+        var page = await profileIterator.ReadNextAsync();
+        foreach (var p in page)
+        {
+            string id = p.id;
+            string name = p.name;
+            profiles.Add((id, name));
+        }
+    }
+
+    if (profiles.Count == 0)
+    {
+        logger.LogInformation("SeedChores: no profiles found for family {FamilyId} — skipping.", familyId);
+        return;
+    }
+
+    // Load existing chores to enable idempotency check (title + profileId).
+    var choreQuery = new QueryDefinition("SELECT c.title, c.assignedProfileId FROM c WHERE c.familyId = @fid")
+        .WithParameter("@fid", familyId);
+    using var choreIterator = choresContainer.GetItemQueryIterator<dynamic>(choreQuery);
+    var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    while (choreIterator.HasMoreResults)
+    {
+        var page = await choreIterator.ReadNextAsync();
+        foreach (var c in page)
+        {
+            string title = c.title;
+            string assignedId = c.assignedProfileId;
+            existing.Add($"{title.Trim().ToLowerInvariant()}|{assignedId}");
+        }
+    }
+
+    var today = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
+    var seeded = 0;
+
+    async Task CreateIfMissingAsync(string profileId, string title, int starValue)
+    {
+        var key = $"{title.Trim().ToLowerInvariant()}|{profileId}";
+        if (existing.Contains(key)) return;
+
+        var chore = new Chore
+        {
+            FamilyId = familyId,
+            Title = title,
+            AssignedProfileId = profileId,
+            StarValue = starValue,
+            DueDate = today,
+            Recurrence = ChoreRecurrence.Daily,
+        };
+        await choresContainer.CreateItemAsync(chore, new PartitionKey(chore.Id));
+        existing.Add(key);
+        seeded++;
+    }
+
+    // Chores for Sarah only.
+    var sarah = profiles.FirstOrDefault(p =>
+        string.Equals(p.Name.Trim(), "Sarah", StringComparison.OrdinalIgnoreCase));
+    if (sarah != default)
+    {
+        await CreateIfMissingAsync(sarah.Id, "Work Out", starValue: 2);
+        await CreateIfMissingAsync(sarah.Id, "Read Book", starValue: 1);
+    }
+    else
+    {
+        logger.LogWarning("SeedChores: profile 'Sarah' not found — skipping Sarah-specific chores.");
+    }
+
+    // Analogy Activity for every profile.
+    foreach (var (id, _) in profiles)
+    {
+        await CreateIfMissingAsync(id, "Analogy Activity", starValue: 1);
+    }
+
+    if (seeded > 0)
+        logger.LogInformation("SeedChores: created {Count} new chore(s) for family {FamilyId}.", seeded, familyId);
 }
