@@ -123,6 +123,14 @@ const AppShell: React.FC = () => {
     setMobileOpen(false)
   }, [location.pathname])
 
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    if (!url.searchParams.has('sky-refresh')) return
+
+    url.searchParams.delete('sky-refresh')
+    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`)
+  }, [])
+
   // Close on outside click / Escape.
   useEffect(() => {
     if (!mobileOpen) return
@@ -166,7 +174,9 @@ const AppShell: React.FC = () => {
       console.warn('Unable to fully clear cached app data before refresh.', error)
     }
 
-    window.location.reload()
+    const refreshUrl = new URL(window.location.href)
+    refreshUrl.searchParams.set('sky-refresh', Date.now().toString())
+    window.location.replace(refreshUrl.toString())
   }
 
   const signOutLabel = familyName
