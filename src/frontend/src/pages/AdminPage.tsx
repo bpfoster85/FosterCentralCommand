@@ -17,6 +17,7 @@ import ChoreEditorDialog from '../components/chores/ChoreEditorDialog'
 import MobileProfilePicker from '../components/profiles/MobileProfilePicker'
 import SwipeApprovalRow from '../components/admin/SwipeApprovalRow'
 import { getMyFamily, updateFamily, type FamilyDto } from '../api/families'
+import { syncCalendar } from '../api/calendar'
 import type { Chore, Profile } from '../types'
 
 interface PendingItem {
@@ -69,6 +70,7 @@ const AdminPage: React.FC = () => {
   const [apiKey, setApiKey] = useState('')
   const [serviceAccount, setServiceAccount] = useState('')
   const [savingFamily, setSavingFamily] = useState(false)
+  const [syncingCalendar, setSyncingCalendar] = useState(false)
 
   // Grocery section
   const GROCERY_NAME = 'Grocery'
@@ -253,6 +255,28 @@ const AdminPage: React.FC = () => {
       })
     } finally {
       setSavingFamily(false)
+    }
+  }
+
+  const handleSyncCalendar = async () => {
+    setSyncingCalendar(true)
+    try {
+      await syncCalendar()
+      toast.current?.show({
+        severity: 'success',
+        summary: 'Calendar refreshed',
+        detail: 'The calendar cache has been cleared and re-synced from Google.',
+        life: 3000,
+      })
+    } catch (err) {
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Calendar sync failed',
+        detail: err instanceof Error ? err.message : 'See console for details.',
+        life: 4000,
+      })
+    } finally {
+      setSyncingCalendar(false)
     }
   }
 
@@ -1189,6 +1213,32 @@ const AdminPage: React.FC = () => {
             </div>
           </div>
         )}
+      </section>
+
+      <section
+        style={{
+          background: 'var(--sky-surface-soft)',
+          borderRadius: 'var(--sky-radius-lg, 16px)',
+          padding: '1.25rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.75rem',
+        }}
+      >
+        <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Calendar</h3>
+        <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--sky-text-secondary)' }}>
+          Force a full re-sync from Google Calendar and clear the cached events.
+          Use this if the calendar looks out of date.
+        </p>
+        <div>
+          <Button
+            label="Refresh Calendar Cache"
+            icon={syncingCalendar ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'}
+            className="p-button-danger"
+            disabled={syncingCalendar}
+            onClick={handleSyncCalendar}
+          />
+        </div>
       </section>
 
       <ChoreEditorDialog
