@@ -167,8 +167,13 @@ const AppShell: React.FC = () => {
         const cacheKeys = await caches.keys()
         await Promise.allSettled(cacheKeys.map(cacheName => caches.delete(cacheName)))
       }
-    } finally {
+    } catch (error) {
+      console.warn('Unable to fully clear cached app data before refresh.', error)
+    }
+
+    try {
       setIsRefreshing(false)
+    } finally {
       window.location.reload()
     }
   }
