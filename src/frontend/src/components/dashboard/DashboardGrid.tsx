@@ -4,6 +4,7 @@ import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import type { Profile, DashboardLayout } from '../../types'
 import CalendarWidget from '../calendar/CalendarWidget'
+import DadsSwearJarWidget from './DadsSwearJarWidget'
 import GroceryWidget from '../lists/GroceryWidget'
 import ChoresDashboardWidget from './ChoresDashboardWidget'
 
@@ -14,11 +15,14 @@ interface DashboardGridProps {
 // Top row (calendar + grocery) is sized to ~80% of the viewport so the chores
 // section below peeks just enough to hint that more content is scrollable.
 const TOP_ROWS = 7
+const SWEAR_JAR_ROWS = 2
+const GROCERY_ROWS = TOP_ROWS - SWEAR_JAR_ROWS
 const CHORES_ROWS = 8
 
 const DEFAULT_LAYOUTS: DashboardLayout[] = [
   { i: 'calendar', x: 0, y: 0, w: 10, h: TOP_ROWS, minW: 4, minH: 4 },
-  { i: 'grocery', x: 10, y: 0, w: 2, h: TOP_ROWS, minW: 2, minH: 4 },
+  { i: 'swearJar', x: 10, y: 0, w: 2, h: SWEAR_JAR_ROWS, minW: 2, minH: 2 },
+  { i: 'grocery', x: 10, y: SWEAR_JAR_ROWS, w: 2, h: GROCERY_ROWS, minW: 2, minH: 4 },
   { i: 'chores', x: 0, y: TOP_ROWS, w: 12, h: CHORES_ROWS, minW: 6, minH: 4 },
 ]
 
@@ -29,9 +33,17 @@ const loadLayout = (): DashboardLayout[] => {
     const stored = localStorage.getItem(STORAGE_KEY)
     const parsed: DashboardLayout[] = stored ? JSON.parse(stored) : []
     if (parsed.length === 0) return DEFAULT_LAYOUTS
+    const hasSwearJar = parsed.some(l => l.i === 'swearJar')
+    const migrated = hasSwearJar
+      ? parsed
+      : parsed.map(l =>
+          l.i === 'grocery'
+            ? { ...l, x: 10, y: SWEAR_JAR_ROWS, w: 2, h: GROCERY_ROWS, minW: 2, minH: 4 }
+            : l
+        )
     // Drop any retired widgets and append any new defaults.
     const allowed = new Set(DEFAULT_LAYOUTS.map(d => d.i))
-    const filtered = parsed.filter(l => allowed.has(l.i))
+    const filtered = migrated.filter(l => allowed.has(l.i))
     const ids = new Set(filtered.map(l => l.i))
     const missing = DEFAULT_LAYOUTS.filter(d => !ids.has(d.i))
     return missing.length > 0 ? [...filtered, ...missing] : filtered
@@ -194,6 +206,9 @@ const DashboardGrid: React.FC<DashboardGridProps> = ({ profiles }) => {
           <div className="sky-widget sky-fade-in" style={{ minHeight: '70vh' }}>
             <CalendarWidget profiles={profiles} />
           </div>
+          <div className="sky-widget sky-fade-in" style={{ minHeight: '15vh' }}>
+            <DadsSwearJarWidget />
+          </div>
           <div className="sky-widget sky-fade-in" style={{ minHeight: '50vh' }}>
             <GroceryWidget profiles={profiles} />
           </div>
@@ -218,6 +233,11 @@ const DashboardGrid: React.FC<DashboardGridProps> = ({ profiles }) => {
           {/* Calendar Panel */}
           <div key="calendar" className="sky-widget sky-fade-in">
             <CalendarWidget profiles={profiles} />
+          </div>
+
+          {/* Dad's Swear Jar Counter */}
+          <div key="swearJar" className="sky-widget sky-fade-in">
+            <DadsSwearJarWidget />
           </div>
 
           {/* Grocery Quick Add */}
