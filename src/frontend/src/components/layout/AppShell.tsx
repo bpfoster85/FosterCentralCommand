@@ -111,7 +111,6 @@ const AppShell: React.FC = () => {
   const familyName = getFamilyName()
   const isAdmin = Boolean(getAdminKey())
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [isRefreshing, setIsRefreshing] = useState(false)
   const drawerRef = useRef<HTMLDivElement>(null)
   const [theme, toggleTheme] = useTheme()
 
@@ -153,10 +152,6 @@ const AppShell: React.FC = () => {
   }
 
   const handleHardRefresh = async () => {
-    if (isRefreshing) return
-
-    setIsRefreshing(true)
-
     try {
       if ('serviceWorker' in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations()
@@ -171,17 +166,12 @@ const AppShell: React.FC = () => {
       console.warn('Unable to fully clear cached app data before refresh.', error)
     }
 
-    try {
-      setIsRefreshing(false)
-    } finally {
-      window.location.reload()
-    }
+    window.location.reload()
   }
 
   const signOutLabel = familyName
     ? `Sign out (${familyName}${isAdmin ? ' · admin' : ''})`
     : 'Sign out'
-  const refreshLabel = isRefreshing ? 'Refreshing…' : 'Hard refresh'
 
   const showClock = !location.pathname.startsWith('/admin')
 
@@ -236,13 +226,12 @@ const AppShell: React.FC = () => {
             <i className={theme === 'dark' ? 'pi pi-sun' : 'pi pi-moon'} />
           </button>
           <button
-            className="sky-nav-tab sky-nav-tab--theme-toggle"
+            className="sky-nav-tab"
             onClick={() => { void handleHardRefresh() }}
             title="Hard refresh and clear cached data"
             aria-label="Hard refresh and clear cached data"
-            disabled={isRefreshing}
           >
-            <i className={`pi ${isRefreshing ? 'pi-spin pi-spinner' : 'pi-refresh'}`} />
+            <i className="pi pi-refresh" />
           </button>
           <button
             className="sky-nav-tab"
@@ -284,10 +273,9 @@ const AppShell: React.FC = () => {
             role="menuitem"
             className="sky-nav-mobile-item"
             onClick={() => { void handleHardRefresh() }}
-            disabled={isRefreshing}
           >
-            <i className={`pi ${isRefreshing ? 'pi-spin pi-spinner' : 'pi-refresh'}`} />
-            <span>{refreshLabel}</span>
+            <i className="pi pi-refresh" />
+            <span>Hard refresh</span>
           </button>
           <button
             role="menuitem"
