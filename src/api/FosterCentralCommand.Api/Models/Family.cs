@@ -53,6 +53,8 @@ public class Family
     /// </summary>
     public string? GoogleServiceAccountJson { get; set; }
 
+    public int DadsSwearJarCount { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

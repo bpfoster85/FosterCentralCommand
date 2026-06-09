@@ -1,27 +1,37 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Button } from 'primereact/button'
-
-const STORAGE_KEY = 'fcc_dads_swear_jar_total'
-
-const loadCount = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    const parsed = stored ? Number.parseInt(stored, 10) : 0
-    return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0
-  } catch {
-    return 0
-  }
-}
+import { ProgressBar } from 'primereact/progressbar'
+import { addDadsSwearJar, getDadsSwearJar } from '../../api/dashboard'
 
 const DadsSwearJarWidget: React.FC = () => {
-  const [count, setCount] = useState(loadCount)
+  const [count, setCount] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [updating, setUpdating] = useState(false)
 
-  const handleAdd = () => {
-    setCount(prev => {
-      const next = prev + 1
-      localStorage.setItem(STORAGE_KEY, String(next))
-      return next
-    })
+  useEffect(() => {
+    let mounted = true
+    const load = async () => {
+      try {
+        const data = await getDadsSwearJar()
+        if (mounted) setCount(data.count)
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+
+    load()
+    return () => { mounted = false }
+  }, [])
+
+  const handleAdd = async () => {
+    if (updating) return
+    setUpdating(true)
+    try {
+      const data = await addDadsSwearJar(1)
+      setCount(data.count)
+    } finally {
+      setUpdating(false)
+    }
   }
 
   return (
@@ -36,8 +46,12 @@ const DadsSwearJarWidget: React.FC = () => {
         className="sky-widget-body"
         style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '0.75rem', padding: '0.75rem' }}
       >
-        <div style={{ fontSize: '2rem', fontWeight: 700, lineHeight: 1.1 }}>{count}</div>
-        <Button label="Add" icon="pi pi-plus" onClick={handleAdd} />
+        {loading ? (
+          <ProgressBar mode="indeterminate" style={{ height: '4px' }} />
+        ) : (
+          <div style={{ fontSize: '2rem', fontWeight: 700, lineHeight: 1.1 }}>{count}</div>
+        )}
+        <Button label="Add" icon="pi pi-plus" onClick={handleAdd} disabled={loading || updating} />
       </div>
     </div>
   )

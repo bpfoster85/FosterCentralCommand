@@ -59,6 +59,11 @@ export interface DashboardLayout {
   minH?: number
 }
 
+export interface DadsSwearJar {
+  count: number
+  updatedAt: string
+}
+
 export interface Goal {
   id: string
   profileId: string
