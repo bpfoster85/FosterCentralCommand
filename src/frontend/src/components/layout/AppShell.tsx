@@ -111,6 +111,7 @@ const AppShell: React.FC = () => {
   const familyName = getFamilyName()
   const isAdmin = Boolean(getAdminKey())
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const drawerRef = useRef<HTMLDivElement>(null)
   const [theme, toggleTheme] = useTheme()
 
@@ -151,9 +152,30 @@ const AppShell: React.FC = () => {
     navigate('/login', { replace: true })
   }
 
+  const handleHardRefresh = async () => {
+    if (isRefreshing) return
+
+    setIsRefreshing(true)
+
+    try {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations()
+        await Promise.allSettled(registrations.map(registration => registration.unregister()))
+      }
+
+      if ('caches' in window) {
+        const cacheKeys = await caches.keys()
+        await Promise.allSettled(cacheKeys.map(cacheName => caches.delete(cacheName)))
+      }
+    } finally {
+      window.location.reload()
+    }
+  }
+
   const signOutLabel = familyName
     ? `Sign out (${familyName}${isAdmin ? ' · admin' : ''})`
     : 'Sign out'
+  const refreshLabel = isRefreshing ? 'Refreshing…' : 'Hard refresh'
 
   const showClock = !location.pathname.startsWith('/admin')
 
@@ -200,6 +222,15 @@ const AppShell: React.FC = () => {
           ))}
           <button
             className="sky-nav-tab sky-nav-tab--theme-toggle"
+            onClick={() => { void handleHardRefresh() }}
+            title="Hard refresh and clear cached data"
+            aria-label="Hard refresh and clear cached data"
+            disabled={isRefreshing}
+          >
+            <i className={`pi ${isRefreshing ? 'pi-spin pi-spinner' : 'pi-refresh'}`} />
+          </button>
+          <button
+            className="sky-nav-tab sky-nav-tab--theme-toggle"
             onClick={toggleTheme}
             title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
@@ -235,6 +266,15 @@ const AppShell: React.FC = () => {
               <span>{item.label}</span>
             </button>
           ))}
+          <button
+            role="menuitem"
+            className="sky-nav-mobile-item"
+            onClick={() => { void handleHardRefresh() }}
+            disabled={isRefreshing}
+          >
+            <i className={`pi ${isRefreshing ? 'pi-spin pi-spinner' : 'pi-refresh'}`} />
+            <span>{refreshLabel}</span>
+          </button>
           <button
             role="menuitem"
             className="sky-nav-mobile-item"
