@@ -164,29 +164,35 @@ const AppShell: React.FC = () => {
   const handleHardRefresh = async () => {
     if (hardRefreshing) return
     setHardRefreshing(true)
+    let navigationStarted = false
     try {
-      await syncCalendar()
-    } catch {
-      // Continue with hard refresh even if calendar sync fails.
-    }
-
-    try {
-      if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations()
-        await Promise.allSettled(registrations.map(registration => registration.unregister()))
+      try {
+        await syncCalendar()
+      } catch {
+        // Continue with hard refresh even if calendar sync fails.
       }
 
-      if ('caches' in window) {
-        const cacheKeys = await caches.keys()
-        await Promise.allSettled(cacheKeys.map(cacheName => caches.delete(cacheName)))
-      }
-    } catch (error) {
-      console.warn('Unable to fully clear cached app data before refresh.', error)
-    }
+      try {
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations()
+          await Promise.allSettled(registrations.map(registration => registration.unregister()))
+        }
 
-    const refreshUrl = new URL(window.location.href)
-    refreshUrl.searchParams.set('sky-refresh', Date.now().toString())
-    window.location.replace(refreshUrl.toString())
+        if ('caches' in window) {
+          const cacheKeys = await caches.keys()
+          await Promise.allSettled(cacheKeys.map(cacheName => caches.delete(cacheName)))
+        }
+      } catch (error) {
+        console.warn('Unable to fully clear cached app data before refresh.', error)
+      }
+
+      const refreshUrl = new URL(window.location.href)
+      refreshUrl.searchParams.set('sky-refresh', Date.now().toString())
+      navigationStarted = true
+      window.location.replace(refreshUrl.toString())
+    } finally {
+      if (!navigationStarted) setHardRefreshing(false)
+    }
   }
 
   const signOutLabel = familyName
