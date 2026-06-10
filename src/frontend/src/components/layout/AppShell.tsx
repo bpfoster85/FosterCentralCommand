@@ -6,6 +6,7 @@ import {
   getAdminKey,
   getFamilyName,
 } from '../../api/apiClient'
+import { syncCalendar } from '../../api/calendar'
 import { useTheme } from '../../hooks/useTheme'
 
 const navItems = [
@@ -111,6 +112,7 @@ const AppShell: React.FC = () => {
   const familyName = getFamilyName()
   const isAdmin = Boolean(getAdminKey())
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [hardRefreshing, setHardRefreshing] = useState(false)
   const drawerRef = useRef<HTMLDivElement>(null)
   const [theme, toggleTheme] = useTheme()
 
@@ -160,23 +162,37 @@ const AppShell: React.FC = () => {
   }
 
   const handleHardRefresh = async () => {
+    if (hardRefreshing) return
+    setHardRefreshing(true)
+    let navigationStarted = false
     try {
-      if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations()
-        await Promise.allSettled(registrations.map(registration => registration.unregister()))
+      try {
+        await syncCalendar()
+      } catch {
+        // Continue with hard refresh even if calendar sync fails.
       }
 
-      if ('caches' in window) {
-        const cacheKeys = await caches.keys()
-        await Promise.allSettled(cacheKeys.map(cacheName => caches.delete(cacheName)))
+      try {
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations()
+          await Promise.allSettled(registrations.map(registration => registration.unregister()))
+        }
+
+        if ('caches' in window) {
+          const cacheKeys = await caches.keys()
+          await Promise.allSettled(cacheKeys.map(cacheName => caches.delete(cacheName)))
+        }
+      } catch (error) {
+        console.warn('Unable to fully clear cached app data before refresh.', error)
       }
-    } catch (error) {
-      console.warn('Unable to fully clear cached app data before refresh.', error)
+
+      const refreshUrl = new URL(window.location.href)
+      refreshUrl.searchParams.set('sky-refresh', Date.now().toString())
+      navigationStarted = true
+      window.location.replace(refreshUrl.toString())
+    } finally {
+      if (!navigationStarted) setHardRefreshing(false)
     }
-
-    const refreshUrl = new URL(window.location.href)
-    refreshUrl.searchParams.set('sky-refresh', Date.now().toString())
-    window.location.replace(refreshUrl.toString())
   }
 
   const signOutLabel = familyName
@@ -238,10 +254,11 @@ const AppShell: React.FC = () => {
           <button
             className="sky-nav-tab"
             onClick={() => { void handleHardRefresh() }}
-            title="Hard refresh and clear cached data"
-            aria-label="Hard refresh and clear cached data"
+            title="Sync calendar, then hard refresh and clear cached data"
+            aria-label="Sync calendar, then hard refresh and clear cached data"
+            disabled={hardRefreshing}
           >
-            <i className="pi pi-refresh" />
+            <i className={hardRefreshing ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'} />
           </button>
           <button
             className="sky-nav-tab"
@@ -283,9 +300,10 @@ const AppShell: React.FC = () => {
             role="menuitem"
             className="sky-nav-mobile-item"
             onClick={() => { void handleHardRefresh() }}
+            disabled={hardRefreshing}
           >
-            <i className="pi pi-refresh" />
-            <span>Hard refresh</span>
+            <i className={hardRefreshing ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'} />
+            <span>{hardRefreshing ? 'Refreshing…' : 'Hard refresh'}</span>
           </button>
           <button
             role="menuitem"

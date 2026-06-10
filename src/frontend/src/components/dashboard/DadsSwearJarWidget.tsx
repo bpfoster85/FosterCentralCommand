@@ -53,15 +53,15 @@ const DadsSwearJarWidget: React.FC = () => {
       </div>
       <div
         className="sky-widget-body"
-        style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '0.75rem', padding: '0.75rem' }}
+        style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '0.75rem' }}
       >
         {loading ? (
           <ProgressBar mode="indeterminate" style={{ height: '4px' }} />
         ) : (
-          <>
-            <div style={{ fontSize: '2rem', fontWeight: 700, lineHeight: 1.1 }}>{count}</div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+            <div style={{ fontSize: 'clamp(3rem, 9vw, 5rem)', fontWeight: 800, lineHeight: 1 }}>{count}</div>
             {error && <div style={{ color: 'var(--red-500)', fontSize: '0.9rem' }}>{error}</div>}
-          </>
+          </div>
         )}
         <Button label="Add" icon="pi pi-plus" onClick={handleAdd} disabled={loading || updating} />
       </div>
