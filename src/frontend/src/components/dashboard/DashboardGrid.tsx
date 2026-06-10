@@ -5,6 +5,7 @@ import 'react-resizable/css/styles.css'
 import type { Profile, DashboardLayout } from '../../types'
 import CalendarWidget from '../calendar/CalendarWidget'
 import DadsSwearJarWidget from './DadsSwearJarWidget'
+import DashboardChecklistWidget from './DashboardChecklistWidget'
 import GroceryWidget from '../lists/GroceryWidget'
 import ChoresDashboardWidget from './ChoresDashboardWidget'
 
@@ -16,13 +17,15 @@ interface DashboardGridProps {
 // section below peeks just enough to hint that more content is scrollable.
 const TOP_ROWS = 7
 const SWEAR_JAR_ROWS = 2
-const GROCERY_ROWS = TOP_ROWS - SWEAR_JAR_ROWS
+const CHECKLIST_ROWS = 2
+const GROCERY_ROWS = TOP_ROWS - SWEAR_JAR_ROWS - CHECKLIST_ROWS
 const CHORES_ROWS = 8
 
 const DEFAULT_LAYOUTS: DashboardLayout[] = [
   { i: 'calendar', x: 0, y: 0, w: 10, h: TOP_ROWS, minW: 4, minH: 4 },
   { i: 'swearJar', x: 10, y: 0, w: 2, h: SWEAR_JAR_ROWS, minW: 2, minH: 2 },
-  { i: 'grocery', x: 10, y: SWEAR_JAR_ROWS, w: 2, h: GROCERY_ROWS, minW: 2, minH: 4 },
+  { i: 'checklist', x: 10, y: SWEAR_JAR_ROWS, w: 2, h: CHECKLIST_ROWS, minW: 2, minH: 2 },
+  { i: 'grocery', x: 10, y: SWEAR_JAR_ROWS + CHECKLIST_ROWS, w: 2, h: GROCERY_ROWS, minW: 2, minH: 3 },
   { i: 'chores', x: 0, y: TOP_ROWS, w: 12, h: CHORES_ROWS, minW: 6, minH: 4 },
 ]
 
@@ -38,7 +41,7 @@ const loadLayout = (): DashboardLayout[] => {
       ? parsed
       : parsed.map(l =>
           l.i === 'grocery'
-            ? { ...l, x: 10, y: SWEAR_JAR_ROWS, w: 2, h: GROCERY_ROWS, minW: 2, minH: 4 }
+            ? { ...l, x: 10, y: SWEAR_JAR_ROWS + CHECKLIST_ROWS, w: 2, h: GROCERY_ROWS, minW: 2, minH: 3 }
             : l
         )
     // Drop any retired widgets and append any new defaults.
@@ -209,6 +212,9 @@ const DashboardGrid: React.FC<DashboardGridProps> = ({ profiles }) => {
           <div className="sky-widget sky-fade-in" style={{ minHeight: '15vh' }}>
             <DadsSwearJarWidget />
           </div>
+          <div className="sky-widget sky-fade-in" style={{ minHeight: '20vh' }}>
+            <DashboardChecklistWidget />
+          </div>
           <div className="sky-widget sky-fade-in" style={{ minHeight: '50vh' }}>
             <GroceryWidget profiles={profiles} />
           </div>
@@ -238,6 +244,11 @@ const DashboardGrid: React.FC<DashboardGridProps> = ({ profiles }) => {
           {/* Dad's Swear Jar Counter */}
           <div key="swearJar" className="sky-widget sky-fade-in">
             <DadsSwearJarWidget />
+          </div>
+
+          {/* Daily checklist */}
+          <div key="checklist" className="sky-widget sky-fade-in">
+            <DashboardChecklistWidget />
           </div>
 
           {/* Grocery Quick Add */}

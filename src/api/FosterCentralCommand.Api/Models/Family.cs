@@ -55,6 +55,16 @@ public class Family
 
     public int DadsSwearJarCount { get; set; }
 
+    public List<ChecklistItemDefinition> ChecklistItems { get; set; } =
+    [
+        new()
+        {
+            Title = "Water garden",
+            Logo = "pi pi-leaf",
+        }
+    ];
+    public List<ChecklistItemCompletion> ChecklistCompletions { get; set; } = [];
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
