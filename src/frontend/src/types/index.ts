@@ -79,6 +79,7 @@ export interface DashboardChecklist {
 export interface DashboardChecklistDayMark {
   itemId: string
   logo: string
+  title: string
 }
 
 export interface DashboardChecklistCalendarMarks {

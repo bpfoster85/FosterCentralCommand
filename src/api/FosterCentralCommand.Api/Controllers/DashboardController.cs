@@ -74,15 +74,15 @@ public class DashboardController(
         if (family is null) return Unauthorized();
 
         EnsureChecklistCollections(family);
-        var logosByItemId = family.ChecklistItems.ToDictionary(i => i.Id, i => i.Logo);
+        var itemsById = family.ChecklistItems.ToDictionary(i => i.Id, i => i);
         var marks = family.ChecklistCompletions
-            .Where(c => logosByItemId.ContainsKey(c.ItemId))
+            .Where(c => itemsById.ContainsKey(c.ItemId))
             .GroupBy(c => c.DateKey)
             .ToDictionary(
                 g => g.Key,
                 g => (IReadOnlyList<DashboardChecklistDayMarkDto>)g
                     .OrderBy(c => c.CompletedAtUtc)
-                    .Select(c => new DashboardChecklistDayMarkDto(c.ItemId, logosByItemId[c.ItemId]))
+                    .Select(c => new DashboardChecklistDayMarkDto(c.ItemId, itemsById[c.ItemId].Logo, itemsById[c.ItemId].Title))
                     .DistinctBy(x => x.ItemId)
                     .ToList());
         return Ok(new DashboardChecklistCalendarMarksDto(marks));

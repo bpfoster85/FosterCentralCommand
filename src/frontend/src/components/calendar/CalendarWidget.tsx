@@ -373,10 +373,16 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
   const renderChecklistMarks = (date: Date) => {
     const marks = checklistMarksByDay[toDateKey(date)] ?? []
     if (marks.length === 0) return null
+    const summary = `Checklist completed: ${marks.map(m => m.title).join(', ')}`
     return (
-      <span className="sky-calendar-checklist-marks" aria-hidden="true">
+      <span className="sky-calendar-checklist-marks" aria-label={summary} role="img">
         {marks.map((mark, idx) => (
-          <i key={`${mark.itemId}_${idx}`} className={`${mark.logo} sky-calendar-checklist-mark`} />
+          <i
+            key={`${mark.itemId}_${idx}`}
+            className={`${mark.logo} sky-calendar-checklist-mark`}
+            title={mark.title}
+            aria-hidden="true"
+          />
         ))}
       </span>
     )

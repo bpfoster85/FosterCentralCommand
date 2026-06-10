@@ -25,7 +25,8 @@ public record DashboardChecklistDto(
 
 public record DashboardChecklistDayMarkDto(
     string ItemId,
-    string Logo
+    string Logo,
+    string Title
 );
 
 public record DashboardChecklistCalendarMarksDto(

@@ -669,9 +669,10 @@ const AdminPage: React.FC = () => {
                 placeholder="Checklist item title"
                 style={{ flex: '1 1 230px' }}
               />
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', color: 'var(--sky-text-secondary)', fontSize: '0.85rem' }}>
-                Logo
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', color: 'var(--sky-text-secondary)', fontSize: '0.85rem' }}>
+                <label htmlFor="checklist-logo-select">Logo</label>
                 <select
+                  id="checklist-logo-select"
                   className="sky-native-select"
                   style={{ minHeight: '40px', width: '180px', padding: '0.45rem 2.1rem 0.45rem 0.75rem' }}
                   value={newChecklistLogo}
@@ -682,7 +683,7 @@ const AdminPage: React.FC = () => {
                   ))}
                 </select>
                 <i className={newChecklistLogo} />
-              </label>
+              </div>
               <Button
                 label="Add Item"
                 icon="pi pi-plus"
