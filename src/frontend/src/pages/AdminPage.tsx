@@ -327,7 +327,7 @@ const AdminPage: React.FC = () => {
       style={{
         flex: 1,
         overflow: 'auto',
-        padding: '2rem 1.25rem 1.25rem',
+        padding: 'calc(2.75rem + env(safe-area-inset-top)) 1.25rem calc(4rem + env(safe-area-inset-bottom))',
         display: 'flex',
         flexDirection: 'column',
         gap: '1.5rem',
@@ -379,7 +379,7 @@ const AdminPage: React.FC = () => {
       <Toast
         ref={toast}
         position="top-right"
-        style={{ top: 'calc(5.5rem + env(safe-area-inset-top))' }}
+        style={{ top: 'calc(6.75rem + env(safe-area-inset-top))' }}
       />
       <ConfirmDialog />
 

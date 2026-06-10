@@ -6,6 +6,7 @@ import {
   getAdminKey,
   getFamilyName,
 } from '../../api/apiClient'
+import { syncCalendar } from '../../api/calendar'
 import { useTheme } from '../../hooks/useTheme'
 
 const navItems = [
@@ -111,6 +112,7 @@ const AppShell: React.FC = () => {
   const familyName = getFamilyName()
   const isAdmin = Boolean(getAdminKey())
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [hardRefreshing, setHardRefreshing] = useState(false)
   const drawerRef = useRef<HTMLDivElement>(null)
   const [theme, toggleTheme] = useTheme()
 
@@ -160,6 +162,14 @@ const AppShell: React.FC = () => {
   }
 
   const handleHardRefresh = async () => {
+    if (hardRefreshing) return
+    setHardRefreshing(true)
+    try {
+      await syncCalendar()
+    } catch {
+      // Continue with hard refresh even if calendar sync fails.
+    }
+
     try {
       if ('serviceWorker' in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations()
@@ -238,10 +248,11 @@ const AppShell: React.FC = () => {
           <button
             className="sky-nav-tab"
             onClick={() => { void handleHardRefresh() }}
-            title="Hard refresh and clear cached data"
-            aria-label="Hard refresh and clear cached data"
+            title="Sync calendar, then hard refresh and clear cached data"
+            aria-label="Sync calendar, then hard refresh and clear cached data"
+            disabled={hardRefreshing}
           >
-            <i className="pi pi-refresh" />
+            <i className={hardRefreshing ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'} />
           </button>
           <button
             className="sky-nav-tab"
@@ -283,9 +294,10 @@ const AppShell: React.FC = () => {
             role="menuitem"
             className="sky-nav-mobile-item"
             onClick={() => { void handleHardRefresh() }}
+            disabled={hardRefreshing}
           >
-            <i className="pi pi-refresh" />
-            <span>Hard refresh</span>
+            <i className={hardRefreshing ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'} />
+            <span>{hardRefreshing ? 'Refreshing…' : 'Hard refresh'}</span>
           </button>
           <button
             role="menuitem"
