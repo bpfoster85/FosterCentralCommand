@@ -9,7 +9,8 @@ import { Dialog } from 'primereact/dialog'
 import { useCalendar } from '../../hooks/useCalendar'
 import { useSwipe } from '../../hooks/useSwipe'
 import { createCalendarEvent } from '../../api/calendar'
-import type { CalendarEvent, Profile } from '../../types'
+import { getDashboardChecklistCalendarMarks } from '../../api/dashboard'
+import type { CalendarEvent, DashboardChecklistDayMark, Profile } from '../../types'
 
 interface CalendarWidgetProps {
   profiles: Profile[]
@@ -47,6 +48,12 @@ const isSameDay = (a: Date, b: Date) =>
 const DAY_NAME = new Intl.DateTimeFormat('en-US', { weekday: 'short' })
 const MONTH_DAY = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' })
 const TIME_FMT = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' })
+const toDateKey = (d: Date): string => {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 
 // Format a Date as the local "YYYY-MM-DDTHH:mm" value expected by
 // <input type="datetime-local"> (no timezone suffix, no seconds).
@@ -97,10 +104,32 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
   const [createForm, setCreateForm] = useState<CreateEventForm>(() => buildDefaultCreateForm(new Date()))
   const [createSaving, setCreateSaving] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
+  const [checklistMarksByDay, setChecklistMarksByDay] = useState<Record<string, DashboardChecklistDayMark[]>>({})
   const calendarRef = useRef<FullCalendar>(null)
   const swipeContainerRef = useRef<HTMLDivElement>(null)
 
   const { events, loading, syncCalendar, fetchEvents } = useCalendar()
+
+  useEffect(() => {
+    let mounted = true
+    const loadMarks = async () => {
+      try {
+        const marks = await getDashboardChecklistCalendarMarks()
+        if (mounted) setChecklistMarksByDay(marks.dayMarks ?? {})
+      } catch {
+        if (mounted) setChecklistMarksByDay({})
+      }
+    }
+    loadMarks()
+    const timer = window.setInterval(loadMarks, 60_000)
+    const onUpdate = () => { void loadMarks() }
+    window.addEventListener('fcc-checklist-updated', onUpdate)
+    return () => {
+      mounted = false
+      window.clearInterval(timer)
+      window.removeEventListener('fcc-checklist-updated', onUpdate)
+    }
+  }, [])
 
   // Auto-sync on mount, on window focus, and every 5 minutes. The backend
   // sync hits Google Calendar; results are cached, so frequent calls are cheap
@@ -341,6 +370,24 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
 
   const weekRangeLabel = `${MONTH_DAY.format(weekStart)} – ${MONTH_DAY.format(addDays(weekStart, 6))}`
 
+  const renderChecklistMarks = (date: Date) => {
+    const marks = checklistMarksByDay[toDateKey(date)] ?? []
+    if (marks.length === 0) return null
+    const summary = `Checklist completed: ${marks.map(m => m.title).join(', ')}`
+    return (
+      <span className="sky-calendar-checklist-marks" aria-label={summary} role="img">
+        {marks.map((mark, idx) => (
+          <i
+            key={`${mark.itemId}_${idx}`}
+            className={`${mark.logo} sky-calendar-checklist-mark`}
+            title={mark.title}
+            aria-hidden="true"
+          />
+        ))}
+      </span>
+    )
+  }
+
   const submitCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault()
     if (createSaving) return
@@ -483,7 +530,10 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
                   onClick={() => jumpToDay(day)}
                   aria-label={`Open day view for ${DAY_NAME.format(day)} ${day.getDate()}`}
                 >
-                  <span className="sky-day-tile-name">{DAY_NAME.format(day)}</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
+                    <span className="sky-day-tile-name">{DAY_NAME.format(day)}</span>
+                    {renderChecklistMarks(day)}
+                  </span>
                   <span className="sky-day-tile-num">{day.getDate()}</span>
                 </button>
                 <div className="sky-day-tile-body">
@@ -600,6 +650,18 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
             scrollTime="07:00:00"
             navLinks
             navLinkDayClick={date => jumpToDay(date)}
+            dayHeaderContent={arg => (
+              <div className="sky-calendar-day-header-with-marks">
+                <span>{arg.text}</span>
+                {viewMode === 'day' && renderChecklistMarks(arg.date)}
+              </div>
+            )}
+            dayCellContent={arg => (
+              <div className="sky-calendar-day-cell-with-marks">
+                <span>{arg.dayNumberText}</span>
+                {renderChecklistMarks(arg.date)}
+              </div>
+            )}
             datesSet={arg => setVisibleRange({ start: arg.start, end: arg.end })}
             eventClick={info => setEventDetail(info.event)}
           />

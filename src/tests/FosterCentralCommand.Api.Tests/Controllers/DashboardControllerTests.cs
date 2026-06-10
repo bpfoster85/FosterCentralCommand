@@ -37,6 +37,41 @@ public class DashboardControllerTests
         Assert.True(repo.UpdateCalled);
     }
 
+    [Fact]
+    public void GetChecklist_ReturnsSeedItem()
+    {
+        var family = new Family();
+        var controller = new DashboardController(new FakeFamilyRepository(), new FamilyContext { Current = family });
+
+        var result = controller.GetChecklist();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<DashboardChecklistDto>(ok.Value);
+        var item = Assert.Single(dto.Items);
+        Assert.Equal("Water garden", item.Title);
+        Assert.Equal("pi pi-leaf", item.Logo);
+    }
+
+    [Fact]
+    public async Task ToggleChecklistItem_AddsAndRemovesCompletion()
+    {
+        var family = new Family { Id = Guid.NewGuid().ToString() };
+        var item = family.ChecklistItems.First();
+        var repo = new FakeFamilyRepository { Current = family };
+        var controller = new DashboardController(repo, new FamilyContext { Current = family });
+
+        var addResult = await controller.ToggleChecklistItem(item.Id, new ToggleDashboardChecklistItemRequest("2026-06-10"));
+        var addOk = Assert.IsType<OkObjectResult>(addResult.Result);
+        var addDto = Assert.IsType<DashboardChecklistDto>(addOk.Value);
+        Assert.True(addDto.Items.Single(i => i.Id == item.Id).CheckedToday);
+        Assert.True(repo.UpdateCalled);
+
+        var removeResult = await controller.ToggleChecklistItem(item.Id, new ToggleDashboardChecklistItemRequest("2026-06-10"));
+        var removeOk = Assert.IsType<OkObjectResult>(removeResult.Result);
+        var removeDto = Assert.IsType<DashboardChecklistDto>(removeOk.Value);
+        Assert.False(removeDto.Items.Single(i => i.Id == item.Id).CheckedToday);
+    }
+
     private sealed class FakeFamilyRepository : IFamilyRepository
     {
         public Family? Current { get; set; }

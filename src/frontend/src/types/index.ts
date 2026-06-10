@@ -64,6 +64,28 @@ export interface DadsSwearJar {
   updatedAt: string
 }
 
+export interface DashboardChecklistItem {
+  id: string
+  title: string
+  logo: string
+  checkedToday: boolean
+  lastCompletedAtUtc?: string | null
+}
+
+export interface DashboardChecklist {
+  items: DashboardChecklistItem[]
+}
+
+export interface DashboardChecklistDayMark {
+  itemId: string
+  logo: string
+  title: string
+}
+
+export interface DashboardChecklistCalendarMarks {
+  dayMarks: Record<string, DashboardChecklistDayMark[]>
+}
+
 export interface Goal {
   id: string
   profileId: string
