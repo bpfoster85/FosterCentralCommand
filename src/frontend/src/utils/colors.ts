@@ -21,8 +21,9 @@ export const getProfileAvatarOverlay = (textColor: string): string =>
 
 // Pick a readable text color (black/white) for a background composed of several
 // colors (e.g. striped multi-profile events) by averaging their luminance.
+const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/
 export const getContrastTextForColors = (hexes: string[]): string => {
-  const valid = hexes.filter(h => h.replace('#', '').length === 6)
+  const valid = hexes.filter(h => HEX_COLOR_RE.test(h))
   if (valid.length === 0) return LIGHT_TEXT_COLOR
   let luminanceSum = 0
   for (const hex of valid) {

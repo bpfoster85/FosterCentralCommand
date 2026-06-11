@@ -90,6 +90,14 @@ const buildDefaultCreateForm = (anchor: Date): CreateEventForm => {
 // Max profile avatars to render on an event before collapsing into a "+N" chip.
 const MAX_EVENT_AVATARS = 3
 
+// Hex alpha suffix (~14%) applied to each profile color when striping a
+// multi-profile event in the week grid, so the soft tints keep text readable.
+const MULTI_PROFILE_STRIPE_ALPHA = '24'
+
+// Wider stripe used for the event-detail dialog header, which is much larger
+// than an event tile and looks better with bolder bands.
+const DETAIL_HEADER_STRIPE_WIDTH = 28
+
 // Discrete avatar stack shown in the corner of an event so multi-profile events
 // are recognizable at a glance (React version, used by the custom week grid).
 const ProfileAvatarStack: React.FC<{ profiles: Profile[] }> = ({ profiles }) => {
@@ -620,7 +628,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
                       // in each profile's color (rendered as soft tints so the
                       // event text stays readable).
                       const background = isMulti
-                        ? buildStripedBackground(matchedProfiles.map(p => `${p.color}24`))
+                        ? buildStripedBackground(matchedProfiles.map(p => `${p.color}${MULTI_PROFILE_STRIPE_ALPHA}`))
                         : `${color}14` // ~8% opacity
                       return (
                         <button
@@ -782,7 +790,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
           const headerColor: string | undefined = eventDetail.extendedProps?.matchedProfileColor
           const headerTextColor = '#ffffff'
           const headerBg = isMultiProfile
-            ? buildStripedBackground(detailProfiles.map(p => p.color), 28)
+            ? buildStripedBackground(detailProfiles.map(p => p.color), DETAIL_HEADER_STRIPE_WIDTH)
             : headerColor || 'var(--sky-lagoon)'
           const headerLabel = detailProfiles.length > 0
             ? detailProfiles.map(p => p.name).join(' · ')
