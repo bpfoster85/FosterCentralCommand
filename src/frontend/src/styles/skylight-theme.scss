@@ -1229,17 +1229,17 @@ html[data-theme='dark'] {
   .sky-day-tile.today & {
     color: $sky-lagoon-deep;
   }
+}
 
-  .sky-calendar-checklist-marks {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.2rem;
-    color: $sky-lagoon-deep;
-  }
+.sky-calendar-checklist-marks {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: $sky-lagoon-deep;
+}
 
-  .sky-calendar-checklist-mark {
-    font-size: 0.72rem;
-  }
+.sky-calendar-checklist-mark {
+  font-size: 0.72rem;
 }
 
 .sky-day-tile-body {

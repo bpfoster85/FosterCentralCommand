@@ -38,17 +38,17 @@ public class DashboardControllerTests
     }
 
     [Fact]
-    public void GetChecklist_ReturnsSeedItem()
+    public async Task GetChecklist_ReturnsSeedItem()
     {
         var family = new Family();
         var controller = new DashboardController(new FakeFamilyRepository(), new FamilyContext { Current = family });
 
-        var result = controller.GetChecklist();
+        var result = await controller.GetChecklist();
 
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var dto = Assert.IsType<DashboardChecklistDto>(ok.Value);
         var item = Assert.Single(dto.Items);
-        Assert.Equal("Water garden", item.Title);
+        Assert.Equal("Water Peppers", item.Title);
         Assert.Equal("pi pi-leaf", item.Logo);
     }
 
@@ -70,6 +70,40 @@ public class DashboardControllerTests
         var removeOk = Assert.IsType<OkObjectResult>(removeResult.Result);
         var removeDto = Assert.IsType<DashboardChecklistDto>(removeOk.Value);
         Assert.False(removeDto.Items.Single(i => i.Id == item.Id).CheckedToday);
+    }
+
+    [Fact]
+    public async Task GetChecklist_NormalizesItemsAndCompletions()
+    {
+        var firstId = Guid.NewGuid().ToString();
+        var secondId = Guid.NewGuid().ToString();
+        var family = new Family
+        {
+            Id = Guid.NewGuid().ToString(),
+            ChecklistItems =
+            [
+                new ChecklistItemDefinition { Id = firstId, Title = "Water garden", Logo = "pi pi-home" },
+                new ChecklistItemDefinition { Id = secondId, Title = "Trash", Logo = "pi pi-trash" },
+            ],
+            ChecklistCompletions =
+            [
+                new ChecklistItemCompletion { ItemId = firstId, DateKey = "2026-06-10", CompletedAtUtc = new DateTime(2026, 6, 10, 12, 0, 0, DateTimeKind.Utc) },
+                new ChecklistItemCompletion { ItemId = secondId, DateKey = "2026-06-10", CompletedAtUtc = new DateTime(2026, 6, 10, 12, 5, 0, DateTimeKind.Utc) },
+            ],
+        };
+        var repo = new FakeFamilyRepository { Current = family };
+        var controller = new DashboardController(repo, new FamilyContext { Current = family });
+
+        var result = await controller.GetChecklist();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<DashboardChecklistDto>(ok.Value);
+        var item = Assert.Single(dto.Items);
+        Assert.Equal(firstId, item.Id);
+        Assert.Equal("Water Peppers", item.Title);
+        Assert.True(repo.UpdateCalled);
+        Assert.Single(repo.Current!.ChecklistCompletions);
+        Assert.Equal(firstId, repo.Current.ChecklistCompletions[0].ItemId);
     }
 
     private sealed class FakeFamilyRepository : IFamilyRepository

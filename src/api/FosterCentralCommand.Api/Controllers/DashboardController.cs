@@ -11,6 +11,9 @@ public class DashboardController(
     IFamilyRepository familyRepo,
     FamilyContext familyContext) : ControllerBase
 {
+    private const string WaterPeppersTitle = "Water Peppers";
+    private const string WaterPeppersLogo = "pi pi-leaf";
+
     [HttpGet("dads-swear-jar")]
     public ActionResult<DadsSwearJarDto> GetDadsSwearJar()
     {
@@ -42,12 +45,17 @@ public class DashboardController(
         new(family.DadsSwearJarCount, family.UpdatedAt);
 
     [HttpGet("checklist")]
-    public ActionResult<DashboardChecklistDto> GetChecklist()
+    public async Task<ActionResult<DashboardChecklistDto>> GetChecklist()
     {
         var family = familyContext.Current;
         if (family is null) return Unauthorized();
 
-        EnsureChecklistCollections(family);
+        if (EnsureChecklistCollections(family))
+        {
+            family.UpdatedAt = DateTime.UtcNow;
+            family = await familyRepo.UpdateAsync(family);
+            familyContext.Current = family;
+        }
         var today = DateOnly.FromDateTime(DateTime.Now).ToString("yyyy-MM-dd");
         var itemDtos = family.ChecklistItems
             .Select(item =>
@@ -68,12 +76,17 @@ public class DashboardController(
     }
 
     [HttpGet("checklist/calendar-marks")]
-    public ActionResult<DashboardChecklistCalendarMarksDto> GetChecklistCalendarMarks()
+    public async Task<ActionResult<DashboardChecklistCalendarMarksDto>> GetChecklistCalendarMarks()
     {
         var family = familyContext.Current;
         if (family is null) return Unauthorized();
 
-        EnsureChecklistCollections(family);
+        if (EnsureChecklistCollections(family))
+        {
+            family.UpdatedAt = DateTime.UtcNow;
+            family = await familyRepo.UpdateAsync(family);
+            familyContext.Current = family;
+        }
         var itemsById = family.ChecklistItems.ToDictionary(i => i.Id, i => i);
         var marks = family.ChecklistCompletions
             .Where(c => itemsById.ContainsKey(c.ItemId))
@@ -89,45 +102,23 @@ public class DashboardController(
     }
 
     [HttpPost("checklist/items")]
-    public async Task<ActionResult<DashboardChecklistDto>> AddChecklistItem([FromBody] AddDashboardChecklistItemRequest request)
+    public ActionResult<DashboardChecklistDto> AddChecklistItem([FromBody] AddDashboardChecklistItemRequest request)
     {
         var family = familyContext.Current;
         if (family is null) return Unauthorized();
 
-        EnsureChecklistCollections(family);
-        var title = request.Title.Trim();
-        var logo = request.Logo.Trim();
-        if (title.Length == 0) return BadRequest("Title is required.");
-        if (logo.Length == 0) return BadRequest("Logo is required.");
-
-        family.ChecklistItems.Add(new Models.ChecklistItemDefinition
-        {
-            Title = title,
-            Logo = logo,
-        });
-        family.UpdatedAt = DateTime.UtcNow;
-
-        var updated = await familyRepo.UpdateAsync(family);
-        familyContext.Current = updated;
-        return Ok(ToChecklistDto(updated, DateOnly.FromDateTime(DateTime.Now).ToString("yyyy-MM-dd")));
+        _ = request;
+        return BadRequest("Checklist items are fixed and cannot be added.");
     }
 
     [HttpDelete("checklist/items/{itemId}")]
-    public async Task<ActionResult<DashboardChecklistDto>> DeleteChecklistItem(string itemId)
+    public ActionResult<DashboardChecklistDto> DeleteChecklistItem(string itemId)
     {
         var family = familyContext.Current;
         if (family is null) return Unauthorized();
 
-        EnsureChecklistCollections(family);
-        var removed = family.ChecklistItems.RemoveAll(i => i.Id == itemId);
-        if (removed == 0) return NotFound();
-
-        family.ChecklistCompletions.RemoveAll(c => c.ItemId == itemId);
-        family.UpdatedAt = DateTime.UtcNow;
-
-        var updated = await familyRepo.UpdateAsync(family);
-        familyContext.Current = updated;
-        return Ok(ToChecklistDto(updated, DateOnly.FromDateTime(DateTime.Now).ToString("yyyy-MM-dd")));
+        _ = itemId;
+        return BadRequest("Checklist items are fixed and cannot be deleted.");
     }
 
     [HttpPost("checklist/items/{itemId}/toggle")]
@@ -187,10 +178,63 @@ public class DashboardController(
         return new DashboardChecklistDto(items);
     }
 
-    private static void EnsureChecklistCollections(Models.Family family)
+    private static bool EnsureChecklistCollections(Models.Family family)
     {
+        var hadChecklistItems = family.ChecklistItems is not null;
+        var hadChecklistCompletions = family.ChecklistCompletions is not null;
         family.ChecklistItems ??= [];
         family.ChecklistCompletions ??= [];
+
+        var waterPeppersItem = family.ChecklistItems
+            .FirstOrDefault(i => string.Equals(i.Title?.Trim(), WaterPeppersTitle, StringComparison.OrdinalIgnoreCase))
+            ?? family.ChecklistItems.FirstOrDefault();
+
+        var canonicalItemId = waterPeppersItem?.Id;
+        if (string.IsNullOrWhiteSpace(canonicalItemId))
+        {
+            canonicalItemId = Guid.NewGuid().ToString();
+        }
+
+        var normalizedItems =
+        [
+            new Models.ChecklistItemDefinition
+            {
+                Id = canonicalItemId,
+                Title = WaterPeppersTitle,
+                Logo = WaterPeppersLogo,
+            }
+        ];
+
+        var normalizedCompletions = family.ChecklistCompletions
+            .Select(c => new Models.ChecklistItemCompletion
+            {
+                ItemId = canonicalItemId,
+                DateKey = c.DateKey,
+                CompletedAtUtc = c.CompletedAtUtc,
+            })
+            .GroupBy(c => c.DateKey)
+            .Select(g => g.OrderBy(c => c.CompletedAtUtc).First())
+            .ToList();
+
+        var itemsChanged = !hadChecklistItems
+            || family.ChecklistItems.Count != 1
+            || family.ChecklistItems[0].Id != canonicalItemId
+            || !string.Equals(family.ChecklistItems[0].Title, WaterPeppersTitle, StringComparison.Ordinal)
+            || !string.Equals(family.ChecklistItems[0].Logo, WaterPeppersLogo, StringComparison.Ordinal);
+
+        var completionsChanged = !hadChecklistCompletions
+            || family.ChecklistCompletions.Count != normalizedCompletions.Count
+            || family.ChecklistCompletions
+                .OrderBy(c => c.DateKey).ThenBy(c => c.CompletedAtUtc)
+                .Zip(normalizedCompletions.OrderBy(c => c.DateKey).ThenBy(c => c.CompletedAtUtc))
+                .Any(pair =>
+                    pair.First.ItemId != pair.Second.ItemId
+                    || pair.First.DateKey != pair.Second.DateKey
+                    || pair.First.CompletedAtUtc != pair.Second.CompletedAtUtc);
+
+        family.ChecklistItems = normalizedItems;
+        family.ChecklistCompletions = normalizedCompletions;
+        return itemsChanged || completionsChanged;
     }
 
 }
