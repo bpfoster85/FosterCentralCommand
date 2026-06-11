@@ -48,7 +48,7 @@ public class DashboardControllerTests
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var dto = Assert.IsType<DashboardChecklistDto>(ok.Value);
         var item = Assert.Single(dto.Items);
-        Assert.Equal("Water garden", item.Title);
+        Assert.Equal("Water Peppers", item.Title);
         Assert.Equal("pi pi-leaf", item.Logo);
     }
 

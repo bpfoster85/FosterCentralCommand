@@ -59,7 +59,7 @@ public class Family
     [
         new()
         {
-            Title = "Water garden",
+            Title = "Water Peppers",
             Logo = "pi pi-leaf",
         }
     ];
