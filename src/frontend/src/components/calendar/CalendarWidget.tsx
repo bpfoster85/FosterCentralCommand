@@ -100,14 +100,15 @@ const isAlwaysOnProfile = (name: string) =>
 // Discrete avatar stack shown in the corner of an event so multi-profile events
 // are recognizable at a glance (React version, used by the custom week grid).
 const ProfileAvatarStack: React.FC<{ profiles: Profile[] }> = ({ profiles }) => {
-  if (profiles.length === 0) return null
-  const shown = profiles.slice(0, MAX_EVENT_AVATARS)
-  const overflow = profiles.length - shown.length
+  const visible = profiles.filter(p => !isAlwaysOnProfile(p.name))
+  if (visible.length === 0) return null
+  const shown = visible.slice(0, MAX_EVENT_AVATARS)
+  const overflow = visible.length - shown.length
   return (
     <span
       className="sky-event-avatars"
       role="img"
-      aria-label={`Profiles: ${profiles.map(p => p.name).join(', ')}`}
+      aria-label={`Profiles: ${visible.map(p => p.name).join(', ')}`}
     >
       {shown.map(p => (
         <span
@@ -133,11 +134,12 @@ const ProfileAvatarStack: React.FC<{ profiles: Profile[] }> = ({ profiles }) => 
 // DOM equivalent of <ProfileAvatarStack> for FullCalendar's eventDidMount hook,
 // which works with raw elements rather than React nodes.
 const buildAvatarStackEl = (profiles: Profile[]): HTMLElement => {
+  const visible = profiles.filter(p => !isAlwaysOnProfile(p.name))
   const wrap = document.createElement('span')
   wrap.className = 'sky-event-avatars sky-event-avatars-fc'
   wrap.setAttribute('role', 'img')
-  wrap.setAttribute('aria-label', `Profiles: ${profiles.map(p => p.name).join(', ')}`)
-  const shown = profiles.slice(0, MAX_EVENT_AVATARS)
+  wrap.setAttribute('aria-label', `Profiles: ${visible.map(p => p.name).join(', ')}`)
+  const shown = visible.slice(0, MAX_EVENT_AVATARS)
   for (const p of shown) {
     const avatar = document.createElement('span')
     avatar.className = 'sky-event-avatar'
@@ -154,7 +156,7 @@ const buildAvatarStackEl = (profiles: Profile[]): HTMLElement => {
     }
     wrap.appendChild(avatar)
   }
-  const overflow = profiles.length - shown.length
+  const overflow = visible.length - shown.length
   if (overflow > 0) {
     const more = document.createElement('span')
     more.className = 'sky-event-avatar sky-event-avatar-more'
