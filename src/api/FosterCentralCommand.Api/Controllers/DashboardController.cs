@@ -184,7 +184,9 @@ public class DashboardController(
         family.ChecklistCompletions ??= [];
 
         var waterPeppersItem = family.ChecklistItems
-            .FirstOrDefault(i => string.Equals(i.Title?.Trim(), WaterPeppersTitle, StringComparison.OrdinalIgnoreCase))
+            .FirstOrDefault(i =>
+                i.Title is not null
+                && string.Equals(i.Title.Trim(), WaterPeppersTitle, StringComparison.OrdinalIgnoreCase))
             ?? family.ChecklistItems.FirstOrDefault();
 
         var canonicalItemId = waterPeppersItem?.Id;
