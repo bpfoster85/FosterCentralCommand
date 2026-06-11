@@ -769,6 +769,7 @@ textarea.p-inputtext,
   box-shadow: 0 1px 2px rgba($sky-charcoal, 0.12);
   cursor: pointer;
   overflow: hidden;
+  position: relative;
   transition: box-shadow 0.15s ease, transform 0.15s ease;
 
   &:hover {
@@ -1277,6 +1278,7 @@ html[data-theme='dark'] {
   gap: 0.15rem;
   transition: background 0.15s ease, transform 0.15s ease;
   flex-shrink: 0;
+  position: relative;
 
   &:hover {
     transform: translateX(1px);
@@ -1320,6 +1322,62 @@ html[data-theme='dark'] {
   span {
     @include sky-truncate;
   }
+}
+
+// Profile avatar stack shown on calendar events. Discrete cluster of small
+// circular initials (or photos) so multi-profile events are recognizable at a
+// glance, paired with the diagonal color stripes on the event background.
+.sky-event-avatars {
+  display: inline-flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.sky-event-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  border: 1.5px solid #fff;
+  box-shadow: 0 1px 2px rgba($sky-charcoal, 0.25);
+  overflow: hidden;
+  flex-shrink: 0;
+
+  & + & {
+    margin-left: -7px; // overlap into a tidy cluster
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.sky-event-avatar-more {
+  background: $sky-charcoal;
+  color: #fff;
+  font-size: 0.6rem;
+}
+
+// Week-grid tile events: avatars sit in the bottom-right corner.
+.sky-day-event .sky-event-avatars {
+  position: absolute;
+  right: 0.4rem;
+  bottom: 0.35rem;
+}
+
+// FullCalendar block events: avatars float in the corner over the event body.
+.sky-event-avatars-fc {
+  position: absolute;
+  right: 4px;
+  bottom: 3px;
+  z-index: 2;
 }
 
 // 8th tile — week navigation + add event
