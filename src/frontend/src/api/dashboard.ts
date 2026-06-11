@@ -15,11 +15,11 @@ export const getDashboardChecklist = () =>
 export const getDashboardChecklistCalendarMarks = () =>
   apiClient.get<DashboardChecklistCalendarMarks>('/dashboard/checklist/calendar-marks').then(r => r.data)
 
-export const addDashboardChecklistItem = (title: string, logo: string) =>
-  apiClient.post<DashboardChecklist>('/dashboard/checklist/items', { title, logo }).then(r => r.data)
+export const setDashboardChecklistItem = (title: string, logo: string) =>
+  apiClient.put<DashboardChecklist>('/dashboard/checklist', { title, logo }).then(r => r.data)
 
-export const deleteDashboardChecklistItem = (itemId: string) =>
-  apiClient.delete<DashboardChecklist>(`/dashboard/checklist/items/${itemId}`).then(r => r.data)
+export const clearDashboardChecklist = () =>
+  apiClient.delete<DashboardChecklist>('/dashboard/checklist').then(r => r.data)
 
-export const toggleDashboardChecklistItem = (itemId: string, dateKey: string) =>
-  apiClient.post<DashboardChecklist>(`/dashboard/checklist/items/${itemId}/toggle`, { dateKey }).then(r => r.data)
+export const toggleDashboardChecklistItem = (dateKey: string) =>
+  apiClient.post<DashboardChecklist>('/dashboard/checklist/toggle', { dateKey }).then(r => r.data)

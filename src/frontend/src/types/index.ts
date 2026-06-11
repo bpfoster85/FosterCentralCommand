@@ -73,7 +73,7 @@ export interface DashboardChecklistItem {
 }
 
 export interface DashboardChecklist {
-  items: DashboardChecklistItem[]
+  item: DashboardChecklistItem | null
 }
 
 export interface DashboardChecklistDayMark {

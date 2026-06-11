@@ -10,7 +10,7 @@ import { useCalendar } from '../../hooks/useCalendar'
 import { useSwipe } from '../../hooks/useSwipe'
 import { createCalendarEvent } from '../../api/calendar'
 import { getDashboardChecklistCalendarMarks } from '../../api/dashboard'
-import { buildStripedBackground, getContrastText, getContrastTextForColors } from '../../utils/colors'
+import { getContrastText } from '../../utils/colors'
 import type { CalendarEvent, DashboardChecklistDayMark, Profile } from '../../types'
 
 interface CalendarWidgetProps {
@@ -90,13 +90,12 @@ const buildDefaultCreateForm = (anchor: Date): CreateEventForm => {
 // Max profile avatars to render on an event before collapsing into a "+N" chip.
 const MAX_EVENT_AVATARS = 3
 
-// Hex alpha suffix (~14%) applied to each profile color when striping a
-// multi-profile event in the week grid, so the soft tints keep text readable.
-const MULTI_PROFILE_STRIPE_ALPHA = '24'
-
-// Wider stripe used for the event-detail dialog header, which is much larger
-// than an event tile and looks better with bolder bands.
-const DETAIL_HEADER_STRIPE_WIDTH = 28
+// Profile first-names that are on every event by design (the parents). They
+// still appear in the avatar stack and color-matching, but are hidden from the
+// filter pills since filtering by them shows everything.
+const ALWAYS_ON_PROFILE_FIRST_NAMES = new Set(['sarah', 'bryan'])
+const isAlwaysOnProfile = (name: string) =>
+  ALWAYS_ON_PROFILE_FIRST_NAMES.has((name.trim().split(/\s+/)[0] ?? '').toLowerCase())
 
 // Discrete avatar stack shown in the corner of an event so multi-profile events
 // are recognizable at a glance (React version, used by the custom week grid).
@@ -348,7 +347,6 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
 
   const calendarEvents = visibleEvents.map(e => {
     const { matchedProfiles, primaryProfile: matchedProfile } = matchEventToProfiles(e)
-    const isMulti = matchedProfiles.length > 1
     const profileColors = matchedProfiles.map(p => p.color)
     return {
       id: e.id,
@@ -356,13 +354,9 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
       start: e.start,
       end: e.end,
       allDay: e.allDay,
-      // Multi-profile events are striped in eventDidMount, so leave the solid
-      // background unset for them and let the stripes take over.
-      backgroundColor: isMulti ? undefined : matchedProfile?.color,
+      backgroundColor: matchedProfile?.color,
       borderColor: matchedProfile?.color,
-      textColor: isMulti
-        ? getContrastTextForColors(profileColors)
-        : matchedProfile ? getContrastText(matchedProfile.color) : undefined,
+      textColor: matchedProfile ? getContrastText(matchedProfile.color) : undefined,
       extendedProps: {
         description: e.description,
         location: e.location,
@@ -530,7 +524,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
             <span>All</span>
             <span className="sky-profile-pill-count">{totalCount}</span>
           </button>
-          {profiles.map(p => {
+          {profiles.filter(p => !isAlwaysOnProfile(p.name)).map(p => {
             const isActive = selectedProfileIds.includes(p.id)
             const count = countsByProfileId[p.id] || 0
             return (
@@ -622,14 +616,8 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
                   ) : (
                     dayEvents.map(e => {
                       const { matchedProfiles } = matchEventToProfiles(e)
-                      const isMulti = matchedProfiles.length > 1
                       const color = matchedProfiles[0]?.color || 'var(--sky-lagoon-deep)'
-                      // Single profile: subtle tint. Multiple: diagonal stripes
-                      // in each profile's color (rendered as soft tints so the
-                      // event text stays readable).
-                      const background = isMulti
-                        ? buildStripedBackground(matchedProfiles.map(p => `${p.color}${MULTI_PROFILE_STRIPE_ALPHA}`))
-                        : `${color}14` // ~8% opacity
+                      const background = `${color}14` // ~8% opacity
                       return (
                         <button
                           key={e.id + day.toISOString()}
@@ -754,13 +742,6 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
             eventClick={info => setEventDetail(info.event)}
             eventDidMount={info => {
               const matched = (info.event.extendedProps.matchedProfiles ?? []) as Profile[]
-              const colors = (info.event.extendedProps.profileColors ?? []) as string[]
-              // Stripe the event background in each profile's color when an event
-              // belongs to more than one profile.
-              if (colors.length > 1) {
-                info.el.style.background = buildStripedBackground(colors)
-                info.el.style.borderLeftColor = colors[0]
-              }
               // Discrete avatar stack in the corner so the matched profiles are
               // recognizable without opening the event.
               if (matched.length > 0) {
@@ -786,12 +767,9 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
       >
         {eventDetail && (() => {
           const detailProfiles: Profile[] = eventDetail.extendedProps?.matchedProfiles ?? []
-          const isMultiProfile = detailProfiles.length > 1
           const headerColor: string | undefined = eventDetail.extendedProps?.matchedProfileColor
           const headerTextColor = '#ffffff'
-          const headerBg = isMultiProfile
-            ? buildStripedBackground(detailProfiles.map(p => p.color), DETAIL_HEADER_STRIPE_WIDTH)
-            : headerColor || 'var(--sky-lagoon)'
+          const headerBg = headerColor || 'var(--sky-lagoon)'
           const headerLabel = detailProfiles.length > 0
             ? detailProfiles.map(p => p.name).join(' · ')
             : eventDetail.extendedProps?.matchedProfileName

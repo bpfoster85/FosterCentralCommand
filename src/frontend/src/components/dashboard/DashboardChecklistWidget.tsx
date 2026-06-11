@@ -12,9 +12,9 @@ const todayDateKey = () => {
 }
 
 const DashboardChecklistWidget: React.FC = () => {
-  const [items, setItems] = useState<DashboardChecklistItem[]>([])
+  const [item, setItem] = useState<DashboardChecklistItem | null>(null)
   const [loading, setLoading] = useState(true)
-  const [savingId, setSavingId] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -23,7 +23,7 @@ const DashboardChecklistWidget: React.FC = () => {
       try {
         const data = await getDashboardChecklist()
         if (mounted) {
-          setItems(data.items)
+          setItem(data.item)
           setError(null)
         }
       } catch {
@@ -36,18 +36,18 @@ const DashboardChecklistWidget: React.FC = () => {
     return () => { mounted = false }
   }, [])
 
-  const toggleItem = async (itemId: string) => {
-    if (savingId) return
-    setSavingId(itemId)
+  const toggle = async () => {
+    if (saving || !item) return
+    setSaving(true)
     try {
-      const data = await toggleDashboardChecklistItem(itemId, todayDateKey())
-      setItems(data.items)
+      const data = await toggleDashboardChecklistItem(todayDateKey())
+      setItem(data.item)
       setError(null)
       window.dispatchEvent(new CustomEvent('fcc-checklist-updated'))
     } catch {
       setError('Unable to update checklist.')
     } finally {
-      setSavingId(null)
+      setSaving(false)
     }
   }
 
@@ -62,21 +62,47 @@ const DashboardChecklistWidget: React.FC = () => {
       <div className="sky-widget-body" style={{ flex: 1, padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.45rem', overflowY: 'auto' }}>
         {loading ? (
           <ProgressBar mode="indeterminate" style={{ height: '4px' }} />
-        ) : items.length === 0 ? (
-          <div style={{ color: 'var(--sky-text-secondary)', fontSize: '0.85rem' }}>No checklist items.</div>
+        ) : !item ? (
+          <div style={{ color: 'var(--sky-text-secondary)', fontSize: '0.85rem' }}>No checklist item configured.</div>
         ) : (
-          items.map(item => (
-            <label key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', cursor: savingId ? 'default' : 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={item.checkedToday}
-                disabled={savingId !== null}
-                onChange={() => toggleItem(item.id)}
-              />
-              <i className={item.logo} aria-hidden="true" />
-              <span style={{ fontWeight: 500, lineHeight: 1.2 }}>{item.title}</span>
-            </label>
-          ))
+          <button
+            type="button"
+            onClick={toggle}
+            disabled={saving}
+            aria-pressed={item.checkedToday}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+              width: '100%',
+              padding: '0.35rem 0.25rem',
+              border: 'none',
+              background: 'transparent',
+              color: 'inherit',
+              cursor: saving ? 'default' : 'pointer',
+              textAlign: 'left',
+            }}
+          >
+            <i
+              className={item.logo}
+              aria-hidden="true"
+              style={{
+                fontSize: '1.15rem',
+                color: item.checkedToday ? 'var(--green-500, #22c55e)' : 'inherit',
+                width: '1.25rem',
+                textAlign: 'center',
+              }}
+            />
+            <span
+              style={{
+                fontWeight: item.checkedToday ? 700 : 500,
+                lineHeight: 1.2,
+                opacity: item.checkedToday ? 0.6 : 1,
+              }}
+            >
+              {item.title}
+            </span>
+          </button>
         )}
         {error && <div style={{ color: 'var(--red-500)', fontSize: '0.8rem' }}>{error}</div>}
       </div>

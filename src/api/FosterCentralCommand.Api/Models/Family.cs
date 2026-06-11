@@ -55,14 +55,13 @@ public class Family
 
     public int DadsSwearJarCount { get; set; }
 
-    public List<ChecklistItemDefinition> ChecklistItems { get; set; } =
-    [
-        new()
-        {
-            Title = "Water Peppers",
-            Logo = "pi pi-leaf",
-        }
-    ];
+    /// <summary>
+    /// Per-family checklist entries. The dashboard surfaces a single checklist
+    /// item; this is kept as a list so existing Cosmos documents with the old
+    /// multi-item shape continue to deserialize. New writes always trim the
+    /// list to at most one entry.
+    /// </summary>
+    public List<ChecklistItemDefinition> ChecklistItems { get; set; } = [];
     public List<ChecklistItemCompletion> ChecklistCompletions { get; set; } = [];
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

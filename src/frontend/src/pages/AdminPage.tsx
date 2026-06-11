@@ -18,7 +18,7 @@ import MobileProfilePicker from '../components/profiles/MobileProfilePicker'
 import SwipeApprovalRow from '../components/admin/SwipeApprovalRow'
 import { getMyFamily, updateFamily, type FamilyDto } from '../api/families'
 import { syncCalendar } from '../api/calendar'
-import { addDashboardChecklistItem, deleteDashboardChecklistItem, getDashboardChecklist } from '../api/dashboard'
+import { clearDashboardChecklist, getDashboardChecklist, setDashboardChecklistItem } from '../api/dashboard'
 import type { Chore, DashboardChecklistItem, Profile } from '../types'
 
 interface PendingItem {
@@ -28,16 +28,46 @@ interface PendingItem {
 }
 
 const GOAL_EMOJI_PRESETS = ['🎮', '🎁', '🏖️', '🍕', '🎬', '🚲', '📚', '🎨', '⚽', '🛹', '🎤', '🌴', '⭐']
-const CHECKLIST_ICON_OPTIONS = [
-  { label: 'Plant', value: 'pi pi-leaf' },
-  { label: 'Check', value: 'pi pi-check-square' },
-  { label: 'Home', value: 'pi pi-home' },
-  { label: 'Book', value: 'pi pi-book' },
-  { label: 'Heart', value: 'pi pi-heart' },
-  { label: 'Car', value: 'pi pi-car' },
-  { label: 'Sun', value: 'pi pi-sun' },
-  { label: 'Apple', value: 'pi pi-apple' },
+// Font Awesome Free v6 classes (loaded globally via main.tsx). FA gives us a
+// much richer set than PrimeIcons (especially nature/world icons). Format is
+// `fa-solid fa-<name>` so the calendar's <i className={mark.logo}/> works as-is.
+const CHECKLIST_ICONS: string[] = [
+  // World & Nature
+  'fa-solid fa-earth-americas', 'fa-solid fa-earth-europe', 'fa-solid fa-earth-asia', 'fa-solid fa-earth-africa',
+  'fa-solid fa-globe', 'fa-solid fa-map', 'fa-solid fa-map-location-dot', 'fa-solid fa-mountain',
+  'fa-solid fa-tree', 'fa-solid fa-leaf', 'fa-solid fa-seedling', 'fa-solid fa-cloud',
+  'fa-solid fa-sun', 'fa-solid fa-moon', 'fa-solid fa-fire', 'fa-solid fa-droplet',
+  // Daily / home
+  'fa-solid fa-square-check', 'fa-solid fa-circle-check', 'fa-solid fa-list-check', 'fa-solid fa-house',
+  'fa-solid fa-bed', 'fa-solid fa-couch', 'fa-solid fa-bath', 'fa-solid fa-broom',
+  'fa-solid fa-shower', 'fa-solid fa-toilet', 'fa-solid fa-soap', 'fa-solid fa-faucet',
+  'fa-solid fa-utensils', 'fa-solid fa-mug-hot', 'fa-solid fa-blender', 'fa-solid fa-trash',
+  // Food & drink
+  'fa-solid fa-apple-whole', 'fa-solid fa-carrot', 'fa-solid fa-pizza-slice', 'fa-solid fa-bowl-food',
+  'fa-solid fa-burger', 'fa-solid fa-ice-cream', 'fa-solid fa-cookie-bite', 'fa-solid fa-bone',
+  // Animals
+  'fa-solid fa-dog', 'fa-solid fa-cat', 'fa-solid fa-fish', 'fa-solid fa-paw',
+  'fa-solid fa-horse', 'fa-solid fa-cow', 'fa-solid fa-frog', 'fa-solid fa-dove',
+  // Activities & school
+  'fa-solid fa-book', 'fa-solid fa-graduation-cap', 'fa-solid fa-pencil', 'fa-solid fa-pen-to-square',
+  'fa-solid fa-palette', 'fa-solid fa-music', 'fa-solid fa-gamepad', 'fa-solid fa-puzzle-piece',
+  'fa-solid fa-bicycle', 'fa-solid fa-futbol', 'fa-solid fa-basketball', 'fa-solid fa-baseball',
+  'fa-solid fa-dumbbell', 'fa-solid fa-person-running', 'fa-solid fa-person-walking', 'fa-solid fa-person-swimming',
+  // Tools & objects
+  'fa-solid fa-hammer', 'fa-solid fa-wrench', 'fa-solid fa-screwdriver-wrench', 'fa-solid fa-gear',
+  'fa-solid fa-key', 'fa-solid fa-lock', 'fa-solid fa-shield-halved', 'fa-solid fa-bell',
+  'fa-solid fa-gift', 'fa-solid fa-crown', 'fa-solid fa-trophy', 'fa-solid fa-medal',
+  'fa-solid fa-flag', 'fa-solid fa-tag', 'fa-solid fa-bookmark', 'fa-solid fa-ticket',
+  // Transport
+  'fa-solid fa-car', 'fa-solid fa-truck', 'fa-solid fa-bus', 'fa-solid fa-motorcycle',
+  'fa-solid fa-plane', 'fa-solid fa-train', 'fa-solid fa-ship', 'fa-solid fa-rocket',
+  // People & time
+  'fa-solid fa-user', 'fa-solid fa-users', 'fa-solid fa-baby', 'fa-solid fa-heart',
+  'fa-solid fa-star', 'fa-solid fa-thumbs-up', 'fa-solid fa-calendar-day', 'fa-solid fa-clock',
 ]
+const CHECKLIST_ICONS_PER_PAGE = 16
+const CHECKLIST_ICON_PAGE_COUNT = Math.ceil(CHECKLIST_ICONS.length / CHECKLIST_ICONS_PER_PAGE)
+const DEFAULT_CHECKLIST_LOGO = 'fa-solid fa-square-check'
 
 const formatDateKey = (key: string): string => {
   const [y, m, d] = key.split('-').map(Number)
@@ -82,11 +112,13 @@ const AdminPage: React.FC = () => {
   const [serviceAccount, setServiceAccount] = useState('')
   const [savingFamily, setSavingFamily] = useState(false)
   const [syncingCalendar, setSyncingCalendar] = useState(false)
-  const [checklistItems, setChecklistItems] = useState<DashboardChecklistItem[]>([])
+  const [checklistItem, setChecklistItem] = useState<DashboardChecklistItem | null>(null)
   const [checklistLoading, setChecklistLoading] = useState(true)
-  const [newChecklistTitle, setNewChecklistTitle] = useState('')
-  const [newChecklistLogo, setNewChecklistLogo] = useState('pi pi-leaf')
+  const [checklistTitle, setChecklistTitle] = useState('')
+  const [checklistLogo, setChecklistLogo] = useState(DEFAULT_CHECKLIST_LOGO)
   const [updatingChecklist, setUpdatingChecklist] = useState(false)
+  const [checklistDialogOpen, setChecklistDialogOpen] = useState(false)
+  const [checklistIconPage, setChecklistIconPage] = useState(0)
 
   // Grocery section
   const GROCERY_NAME = 'Grocery'
@@ -115,7 +147,9 @@ const AdminPage: React.FC = () => {
       .catch(() => { /* handled elsewhere */ })
     const fetchChecklist = getDashboardChecklist()
       .then(data => {
-        setChecklistItems(data.items)
+        setChecklistItem(data.item)
+        setChecklistTitle(data.item?.title ?? '')
+        setChecklistLogo(data.item?.logo ?? DEFAULT_CHECKLIST_LOGO)
       })
       .catch(() => { /* handled elsewhere */ })
     const tasks: Array<Promise<unknown>> = [
@@ -146,7 +180,9 @@ const AdminPage: React.FC = () => {
     getDashboardChecklist()
       .then(data => {
         if (cancelled) return
-        setChecklistItems(data.items)
+        setChecklistItem(data.item)
+        setChecklistTitle(data.item?.title ?? '')
+        setChecklistLogo(data.item?.logo ?? DEFAULT_CHECKLIST_LOGO)
       })
       .finally(() => {
         if (!cancelled) setChecklistLoading(false)
@@ -350,21 +386,22 @@ const AdminPage: React.FC = () => {
       })
     })
 
-  const handleAddChecklistItem = async () => {
-    const title = newChecklistTitle.trim()
+  const handleSaveChecklistItem = async () => {
+    const title = checklistTitle.trim()
     if (!title || updatingChecklist) return
     setUpdatingChecklist(true)
     try {
-      const updated = await addDashboardChecklistItem(title, newChecklistLogo)
-      setChecklistItems(updated.items)
-      setNewChecklistTitle('')
-      setNewChecklistLogo('pi pi-leaf')
+      const updated = await setDashboardChecklistItem(title, checklistLogo)
+      setChecklistItem(updated.item)
+      setChecklistTitle(updated.item?.title ?? '')
+      setChecklistLogo(updated.item?.logo ?? DEFAULT_CHECKLIST_LOGO)
+      setChecklistDialogOpen(false)
       window.dispatchEvent(new CustomEvent('fcc-checklist-updated'))
-      toast.current?.show({ severity: 'success', summary: 'Checklist item added', life: 2200 })
+      toast.current?.show({ severity: 'success', summary: 'Checklist saved', life: 2200 })
     } catch (err) {
       toast.current?.show({
         severity: 'error',
-        summary: 'Failed to add item',
+        summary: 'Failed to save checklist',
         detail: err instanceof Error ? err.message : 'Please try again.',
         life: 3000,
       })
@@ -373,16 +410,34 @@ const AdminPage: React.FC = () => {
     }
   }
 
-  const handleDeleteChecklistItem = async (itemId: string) => {
+  const handleClearChecklistItem = async () => {
     if (updatingChecklist) return
     setUpdatingChecklist(true)
     try {
-      const updated = await deleteDashboardChecklistItem(itemId)
-      setChecklistItems(updated.items)
+      const updated = await clearDashboardChecklist()
+      setChecklistItem(updated.item)
+      setChecklistTitle('')
+      setChecklistLogo(DEFAULT_CHECKLIST_LOGO)
       window.dispatchEvent(new CustomEvent('fcc-checklist-updated'))
     } finally {
       setUpdatingChecklist(false)
     }
+  }
+
+  const openChecklistDialog = () => {
+    const currentLogo = checklistItem?.logo ?? DEFAULT_CHECKLIST_LOGO
+    setChecklistTitle(checklistItem?.title ?? '')
+    setChecklistLogo(currentLogo)
+    const idx = CHECKLIST_ICONS.indexOf(currentLogo)
+    setChecklistIconPage(idx >= 0 ? Math.floor(idx / CHECKLIST_ICONS_PER_PAGE) : 0)
+    setChecklistDialogOpen(true)
+  }
+
+  const closeChecklistDialog = () => {
+    if (updatingChecklist) return
+    setChecklistDialogOpen(false)
+    setChecklistTitle(checklistItem?.title ?? '')
+    setChecklistLogo(checklistItem?.logo ?? DEFAULT_CHECKLIST_LOGO)
   }
 
   return (
@@ -654,75 +709,156 @@ const AdminPage: React.FC = () => {
             Dashboard Checklist
           </h3>
           <span style={{ fontSize: '0.8rem', color: 'var(--sky-text-secondary)' }}>
-            {checklistItems.length} {checklistItems.length === 1 ? 'item' : 'items'}
+            {checklistItem ? 'configured' : 'not configured'}
           </span>
         </header>
 
         {checklistLoading ? (
           <ProgressBar mode="indeterminate" style={{ height: '4px' }} />
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
-              <InputText
-                value={newChecklistTitle}
-                onChange={e => setNewChecklistTitle(e.target.value)}
-                placeholder="Checklist item title"
-                style={{ flex: '1 1 230px' }}
-              />
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', color: 'var(--sky-text-secondary)', fontSize: '0.85rem' }}>
-                <label htmlFor="checklist-logo-select">Logo</label>
-                <select
-                  id="checklist-logo-select"
-                  className="sky-native-select"
-                  style={{ minHeight: '40px', width: '180px', padding: '0.45rem 2.1rem 0.45rem 0.75rem' }}
-                  value={newChecklistLogo}
-                  onChange={e => setNewChecklistLogo(e.target.value)}
-                >
-                  {CHECKLIST_ICON_OPTIONS.map(icon => (
-                    <option key={icon.value} value={icon.value}>{icon.label}</option>
-                  ))}
-                </select>
-                <i className={newChecklistLogo} />
+          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            {checklistItem ? (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', flex: '1 1 auto', minWidth: 0 }}>
+                <i className={checklistItem.logo} style={{ fontSize: '1.25rem', color: 'var(--sky-amber)' }} />
+                <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {checklistItem.title}
+                </span>
               </div>
-              <Button
-                label="Add Item"
-                icon="pi pi-plus"
-                onClick={handleAddChecklistItem}
-                disabled={!newChecklistTitle.trim() || updatingChecklist}
-              />
-            </div>
-            {checklistItems.length === 0 ? (
-              <div style={{ padding: '0.4rem 0', color: 'var(--sky-text-secondary)' }}>No checklist items configured.</div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {checklistItems.map(item => (
-                  <div
-                    key={item.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.65rem',
-                      padding: '0.6rem 0.9rem',
-                      background: 'var(--sky-surface-soft, rgba(160, 200, 220, 0.08))',
-                      borderRadius: 'var(--sky-radius-md, 12px)',
-                    }}
-                  >
-                    <i className={item.logo} />
-                    <span style={{ flex: 1, fontWeight: 600 }}>{item.title}</span>
-                    <Button
-                      icon="pi pi-trash"
-                      className="p-button-text p-button-sm p-button-rounded"
-                      style={{ color: 'var(--sky-coral)' }}
-                      onClick={() => handleDeleteChecklistItem(item.id)}
-                      disabled={updatingChecklist}
-                      aria-label={`Delete ${item.title}`}
-                    />
-                  </div>
-                ))}
-              </div>
+              <span style={{ color: 'var(--sky-text-secondary)', flex: '1 1 auto' }}>
+                No checklist item configured.
+              </span>
+            )}
+            <Button
+              label={checklistItem ? 'Edit' : 'Add item'}
+              icon={checklistItem ? 'pi pi-pencil' : 'pi pi-plus'}
+              onClick={openChecklistDialog}
+              disabled={updatingChecklist}
+            />
+            {checklistItem && (
+              <Button
+                label="Clear"
+                icon="pi pi-trash"
+                className="p-button-text"
+                style={{ color: 'var(--sky-coral)' }}
+                onClick={handleClearChecklistItem}
+                disabled={updatingChecklist}
+              />
             )}
           </div>
         )}
+
+        <Dialog
+          header="Configure checklist item"
+          visible={checklistDialogOpen}
+          modal
+          style={{ width: 'min(520px, 94vw)' }}
+          onHide={closeChecklistDialog}
+          closable={!updatingChecklist}
+          footer={
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+              <Button
+                label="Cancel"
+                icon="pi pi-times"
+                className="p-button-text"
+                onClick={closeChecklistDialog}
+                disabled={updatingChecklist}
+              />
+              <Button
+                label="Save"
+                icon="pi pi-save"
+                onClick={handleSaveChecklistItem}
+                disabled={!checklistTitle.trim() || updatingChecklist}
+                loading={updatingChecklist}
+              />
+            </div>
+          }
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              <label htmlFor="checklist-dialog-title" style={{ fontSize: '0.85rem', color: 'var(--sky-text-secondary)' }}>
+                Name
+              </label>
+              <InputText
+                id="checklist-dialog-title"
+                value={checklistTitle}
+                onChange={e => setChecklistTitle(e.target.value)}
+                placeholder="e.g. Water Peppers"
+                autoFocus
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--sky-text-secondary)' }}>Icon</span>
+                <i className={checklistLogo} style={{ fontSize: '1.25rem', color: 'var(--sky-amber)' }} />
+                <span style={{ fontSize: '0.78rem', color: 'var(--sky-text-secondary)' }}>
+                  {checklistLogo.replace(/^pi pi-/, '')}
+                </span>
+              </div>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(8, 1fr)',
+                  gap: '0.4rem',
+                }}
+              >
+                {CHECKLIST_ICONS
+                  .slice(
+                    checklistIconPage * CHECKLIST_ICONS_PER_PAGE,
+                    checklistIconPage * CHECKLIST_ICONS_PER_PAGE + CHECKLIST_ICONS_PER_PAGE,
+                  )
+                  .map(cls => {
+                    const active = cls === checklistLogo
+                    return (
+                      <button
+                        key={cls}
+                        type="button"
+                        onClick={() => setChecklistLogo(cls)}
+                        title={cls.replace(/^pi pi-/, '')}
+                        aria-label={cls.replace(/^pi pi-/, '')}
+                        aria-pressed={active}
+                        style={{
+                          aspectRatio: '1 / 1',
+                          border: active ? '2px solid var(--sky-amber)' : '1px solid rgba(0,0,0,0.12)',
+                          background: active ? 'rgba(255, 178, 72, 0.16)' : 'var(--sky-surface, #fff)',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '1.05rem',
+                          color: active ? 'var(--sky-amber)' : 'var(--sky-text-primary, #333)',
+                          padding: 0,
+                        }}
+                      >
+                        <i className={cls} />
+                      </button>
+                    )
+                  })}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Button
+                  icon="pi pi-chevron-left"
+                  className="p-button-text"
+                  onClick={() => setChecklistIconPage(p => Math.max(0, p - 1))}
+                  disabled={checklistIconPage === 0}
+                  aria-label="Previous page"
+                />
+                <span style={{ fontSize: '0.8rem', color: 'var(--sky-text-secondary)' }}>
+                  Page {checklistIconPage + 1} of {CHECKLIST_ICON_PAGE_COUNT}
+                </span>
+                <Button
+                  icon="pi pi-chevron-right"
+                  className="p-button-text"
+                  onClick={() => setChecklistIconPage(p => Math.min(CHECKLIST_ICON_PAGE_COUNT - 1, p + 1))}
+                  disabled={checklistIconPage >= CHECKLIST_ICON_PAGE_COUNT - 1}
+                  aria-label="Next page"
+                />
+              </div>
+            </div>
+          </div>
+        </Dialog>
       </section>
 
       {/* === Profile selector (drives Award Stars + Manage Chores) === */}

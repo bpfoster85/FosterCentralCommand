@@ -20,7 +20,7 @@ public record DashboardChecklistItemDto(
 );
 
 public record DashboardChecklistDto(
-    IReadOnlyList<DashboardChecklistItemDto> Items
+    DashboardChecklistItemDto? Item
 );
 
 public record DashboardChecklistDayMarkDto(
@@ -33,7 +33,7 @@ public record DashboardChecklistCalendarMarksDto(
     Dictionary<string, IReadOnlyList<DashboardChecklistDayMarkDto>> DayMarks
 );
 
-public record AddDashboardChecklistItemRequest(
+public record SetDashboardChecklistItemRequest(
     [Required][MaxLength(80)] string Title,
     [Required][MaxLength(80)] string Logo
 );

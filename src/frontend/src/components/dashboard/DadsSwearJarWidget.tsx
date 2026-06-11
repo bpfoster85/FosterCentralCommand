@@ -3,6 +3,8 @@ import { Button } from 'primereact/button'
 import { ProgressBar } from 'primereact/progressbar'
 import { addDadsSwearJar, getDadsSwearJar } from '../../api/dashboard'
 
+const SWEAR_JAR_GOAL = 20
+
 const DadsSwearJarWidget: React.FC = () => {
   const [count, setCount] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -59,7 +61,10 @@ const DadsSwearJarWidget: React.FC = () => {
           <ProgressBar mode="indeterminate" style={{ height: '4px' }} />
         ) : (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-            <div style={{ fontSize: 'clamp(3rem, 9vw, 5rem)', fontWeight: 800, lineHeight: 1 }}>{count}</div>
+            <div style={{ fontSize: 'clamp(3rem, 9vw, 5rem)', fontWeight: 800, lineHeight: 1 }}>
+              {count}
+              <span style={{ fontSize: '0.45em', fontWeight: 600, color: 'var(--sky-text-secondary)' }}>/{SWEAR_JAR_GOAL}</span>
+            </div>
             {error && <div style={{ color: 'var(--red-500)', fontSize: '0.9rem' }}>{error}</div>}
           </div>
         )}
