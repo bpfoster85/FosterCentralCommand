@@ -107,7 +107,6 @@ public class DashboardController(
         var family = familyContext.Current;
         if (family is null) return Unauthorized();
 
-        _ = request;
         return BadRequest("Checklist items are fixed and cannot be added.");
     }
 
@@ -117,7 +116,6 @@ public class DashboardController(
         var family = familyContext.Current;
         if (family is null) return Unauthorized();
 
-        _ = itemId;
         return BadRequest("Checklist items are fixed and cannot be deleted.");
     }
 
