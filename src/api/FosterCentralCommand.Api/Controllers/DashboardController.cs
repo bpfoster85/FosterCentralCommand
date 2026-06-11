@@ -195,7 +195,7 @@ public class DashboardController(
             canonicalItemId = Guid.NewGuid().ToString();
         }
 
-        var normalizedItems =
+        List<Models.ChecklistItemDefinition> normalizedItems =
         [
             new Models.ChecklistItemDefinition
             {
