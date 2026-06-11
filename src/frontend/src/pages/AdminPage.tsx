@@ -18,7 +18,7 @@ import MobileProfilePicker from '../components/profiles/MobileProfilePicker'
 import SwipeApprovalRow from '../components/admin/SwipeApprovalRow'
 import { getMyFamily, updateFamily, type FamilyDto } from '../api/families'
 import { syncCalendar } from '../api/calendar'
-import { getDashboardChecklist } from '../api/dashboard'
+import { addDashboardChecklistItem, deleteDashboardChecklistItem, getDashboardChecklist } from '../api/dashboard'
 import type { Chore, DashboardChecklistItem, Profile } from '../types'
 
 interface PendingItem {
@@ -28,6 +28,17 @@ interface PendingItem {
 }
 
 const GOAL_EMOJI_PRESETS = ['🎮', '🎁', '🏖️', '🍕', '🎬', '🚲', '📚', '🎨', '⚽', '🛹', '🎤', '🌴', '⭐']
+const CHECKLIST_ICON_OPTIONS = [
+  { label: 'Plant', value: 'pi pi-leaf' },
+  { label: 'Check', value: 'pi pi-check-square' },
+  { label: 'Home', value: 'pi pi-home' },
+  { label: 'Book', value: 'pi pi-book' },
+  { label: 'Heart', value: 'pi pi-heart' },
+  { label: 'Car', value: 'pi pi-car' },
+  { label: 'Sun', value: 'pi pi-sun' },
+  { label: 'Apple', value: 'pi pi-apple' },
+]
+
 const formatDateKey = (key: string): string => {
   const [y, m, d] = key.split('-').map(Number)
   const date = new Date(y, (m ?? 1) - 1, d ?? 1)
@@ -73,6 +84,9 @@ const AdminPage: React.FC = () => {
   const [syncingCalendar, setSyncingCalendar] = useState(false)
   const [checklistItems, setChecklistItems] = useState<DashboardChecklistItem[]>([])
   const [checklistLoading, setChecklistLoading] = useState(true)
+  const [newChecklistTitle, setNewChecklistTitle] = useState('')
+  const [newChecklistLogo, setNewChecklistLogo] = useState('pi pi-leaf')
+  const [updatingChecklist, setUpdatingChecklist] = useState(false)
 
   // Grocery section
   const GROCERY_NAME = 'Grocery'
@@ -335,6 +349,41 @@ const AdminPage: React.FC = () => {
         reject: () => resolve(),
       })
     })
+
+  const handleAddChecklistItem = async () => {
+    const title = newChecklistTitle.trim()
+    if (!title || updatingChecklist) return
+    setUpdatingChecklist(true)
+    try {
+      const updated = await addDashboardChecklistItem(title, newChecklistLogo)
+      setChecklistItems(updated.items)
+      setNewChecklistTitle('')
+      setNewChecklistLogo('pi pi-leaf')
+      window.dispatchEvent(new CustomEvent('fcc-checklist-updated'))
+      toast.current?.show({ severity: 'success', summary: 'Checklist item added', life: 2200 })
+    } catch (err) {
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Failed to add item',
+        detail: err instanceof Error ? err.message : 'Please try again.',
+        life: 3000,
+      })
+    } finally {
+      setUpdatingChecklist(false)
+    }
+  }
+
+  const handleDeleteChecklistItem = async (itemId: string) => {
+    if (updatingChecklist) return
+    setUpdatingChecklist(true)
+    try {
+      const updated = await deleteDashboardChecklistItem(itemId)
+      setChecklistItems(updated.items)
+      window.dispatchEvent(new CustomEvent('fcc-checklist-updated'))
+    } finally {
+      setUpdatingChecklist(false)
+    }
+  }
 
   return (
     <div
@@ -613,8 +662,34 @@ const AdminPage: React.FC = () => {
           <ProgressBar mode="indeterminate" style={{ height: '4px' }} />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div style={{ color: 'var(--sky-text-secondary)', fontSize: '0.85rem' }}>
-              Checklist is fixed to one item: Water Peppers.
+            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <InputText
+                value={newChecklistTitle}
+                onChange={e => setNewChecklistTitle(e.target.value)}
+                placeholder="Checklist item title"
+                style={{ flex: '1 1 230px' }}
+              />
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', color: 'var(--sky-text-secondary)', fontSize: '0.85rem' }}>
+                <label htmlFor="checklist-logo-select">Logo</label>
+                <select
+                  id="checklist-logo-select"
+                  className="sky-native-select"
+                  style={{ minHeight: '40px', width: '180px', padding: '0.45rem 2.1rem 0.45rem 0.75rem' }}
+                  value={newChecklistLogo}
+                  onChange={e => setNewChecklistLogo(e.target.value)}
+                >
+                  {CHECKLIST_ICON_OPTIONS.map(icon => (
+                    <option key={icon.value} value={icon.value}>{icon.label}</option>
+                  ))}
+                </select>
+                <i className={newChecklistLogo} />
+              </div>
+              <Button
+                label="Add Item"
+                icon="pi pi-plus"
+                onClick={handleAddChecklistItem}
+                disabled={!newChecklistTitle.trim() || updatingChecklist}
+              />
             </div>
             {checklistItems.length === 0 ? (
               <div style={{ padding: '0.4rem 0', color: 'var(--sky-text-secondary)' }}>No checklist items configured.</div>
@@ -634,6 +709,14 @@ const AdminPage: React.FC = () => {
                   >
                     <i className={item.logo} />
                     <span style={{ flex: 1, fontWeight: 600 }}>{item.title}</span>
+                    <Button
+                      icon="pi pi-trash"
+                      className="p-button-text p-button-sm p-button-rounded"
+                      style={{ color: 'var(--sky-coral)' }}
+                      onClick={() => handleDeleteChecklistItem(item.id)}
+                      disabled={updatingChecklist}
+                      aria-label={`Delete ${item.title}`}
+                    />
                   </div>
                 ))}
               </div>
