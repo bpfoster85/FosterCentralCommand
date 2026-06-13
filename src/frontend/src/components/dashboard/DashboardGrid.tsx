@@ -17,19 +17,19 @@ interface DashboardGridProps {
 // section below peeks just enough to hint that more content is scrollable.
 const TOP_ROWS = 7
 const SWEAR_JAR_ROWS = 2
-const CHECKLIST_ROWS = 2
+const CHECKLIST_ROWS = 1
 const GROCERY_ROWS = TOP_ROWS - SWEAR_JAR_ROWS - CHECKLIST_ROWS
 const CHORES_ROWS = 8
 
 const DEFAULT_LAYOUTS: DashboardLayout[] = [
   { i: 'calendar', x: 0, y: 0, w: 10, h: TOP_ROWS, minW: 4, minH: 4 },
-  { i: 'swearJar', x: 10, y: 0, w: 2, h: SWEAR_JAR_ROWS, minW: 2, minH: 2 },
-  { i: 'checklist', x: 10, y: SWEAR_JAR_ROWS, w: 2, h: CHECKLIST_ROWS, minW: 2, minH: 2 },
-  { i: 'grocery', x: 10, y: SWEAR_JAR_ROWS + CHECKLIST_ROWS, w: 2, h: GROCERY_ROWS, minW: 2, minH: 3 },
+  { i: 'checklist', x: 10, y: 0, w: 2, h: CHECKLIST_ROWS, minW: 2, minH: 1 },
+  { i: 'swearJar', x: 10, y: CHECKLIST_ROWS, w: 2, h: SWEAR_JAR_ROWS, minW: 2, minH: 2 },
+  { i: 'grocery', x: 10, y: CHECKLIST_ROWS + SWEAR_JAR_ROWS, w: 2, h: GROCERY_ROWS, minW: 2, minH: 3 },
   { i: 'chores', x: 0, y: TOP_ROWS, w: 12, h: CHORES_ROWS, minW: 6, minH: 4 },
 ]
 
-const STORAGE_KEY = 'fcc_dashboard_layout_v5'
+const STORAGE_KEY = 'fcc_dashboard_layout_v7'
 
 const loadLayout = (): DashboardLayout[] => {
   try {

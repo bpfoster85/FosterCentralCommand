@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react'
-import { Button } from 'primereact/button'
 import { ProgressBar } from 'primereact/progressbar'
 import { addDadsSwearJar, getDadsSwearJar } from '../../api/dashboard'
 
@@ -46,7 +45,26 @@ const DadsSwearJarWidget: React.FC = () => {
   }
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div
+      style={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        cursor: loading || updating ? 'wait' : 'pointer',
+        userSelect: 'none',
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label="Add to Dad's Swear Jar"
+      aria-disabled={loading || updating}
+      onClick={handleAdd}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          handleAdd()
+        }
+      }}
+    >
       <div className="sky-widget-header">
         <span style={{ fontWeight: 600, fontSize: '1.25rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
           <i className="pi pi-wallet" style={{ fontSize: '1.25rem' }} />
@@ -68,7 +86,6 @@ const DadsSwearJarWidget: React.FC = () => {
             {error && <div style={{ color: 'var(--red-500)', fontSize: '0.9rem' }}>{error}</div>}
           </div>
         )}
-        <Button label="Add" icon="pi pi-plus" onClick={handleAdd} disabled={loading || updating} />
       </div>
     </div>
   )
