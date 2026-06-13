@@ -198,6 +198,12 @@ using (var scope = app.Services.CreateScope())
         await BackfillFamilyIdAsync<Goal>(database.GetContainer(options.GoalsContainer), defaultFamilyId, logger);
         await BackfillFamilyIdAsync<ShoppingList>(database.GetContainer(options.ShoppingListsContainer), defaultFamilyId, logger);
 
+        await RemoveChoresByTitleAsync(
+            database.GetContainer(options.ChoresContainer),
+            defaultFamilyId,
+            "Analogy Activity",
+            logger);
+
         await SeedChoresAsync(
             database.GetContainer(options.ChoresContainer),
             database.GetContainer(options.ProfilesContainer),
@@ -323,12 +329,45 @@ static async Task SeedChoresAsync(
         logger.LogWarning("SeedChores: profile 'Sarah' not found — skipping Sarah-specific chores.");
     }
 
-    // Analogy Activity for every profile.
-    foreach (var (id, _) in profiles)
-    {
-        await CreateIfMissingAsync(id, "Analogy Activity", starValue: 1);
-    }
-
     if (seeded > 0)
         logger.LogInformation("SeedChores: created {Count} new chore(s) for family {FamilyId}.", seeded, familyId);
+}
+
+// Idempotent cleanup: removes every chore in <paramref name="container"/> for
+// the given family whose title matches <paramref name="title"/> (case-insensitive).
+static async Task RemoveChoresByTitleAsync(
+    Container container,
+    string familyId,
+    string title,
+    ILogger logger)
+{
+    var query = new QueryDefinition(
+            "SELECT c.id FROM c WHERE c.familyId = @fid AND LOWER(c.title) = @title")
+        .WithParameter("@fid", familyId)
+        .WithParameter("@title", title.Trim().ToLowerInvariant());
+
+    using var iterator = container.GetItemQueryIterator<dynamic>(query);
+    var removed = 0;
+    while (iterator.HasMoreResults)
+    {
+        var page = await iterator.ReadNextAsync();
+        foreach (var item in page)
+        {
+            string id = item.id;
+            try
+            {
+                await container.DeleteItemAsync<dynamic>(id, new PartitionKey(id));
+                removed++;
+            }
+            catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                // Already gone.
+            }
+        }
+    }
+
+    if (removed > 0)
+        logger.LogInformation(
+            "Removed {Count} chore(s) titled '{Title}' from family {FamilyId}.",
+            removed, title, familyId);
 }
