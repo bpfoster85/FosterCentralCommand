@@ -7,6 +7,7 @@ import interactionPlugin from '@fullcalendar/interaction'
 import { Button } from 'primereact/button'
 import { Dialog } from 'primereact/dialog'
 import { useCalendar } from '../../hooks/useCalendar'
+import { isInQuietHours } from '../../hooks/usePolling'
 import { useSwipe } from '../../hooks/useSwipe'
 import { createCalendarEvent } from '../../api/calendar'
 import { getDashboardChecklistCalendarMarks } from '../../api/dashboard'
@@ -202,7 +203,9 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
       }
     }
     loadMarks()
-    const timer = window.setInterval(loadMarks, 60_000)
+    const timer = window.setInterval(() => {
+      if (!isInQuietHours() && !document.hidden) void loadMarks()
+    }, 60_000)
     const onUpdate = () => { void loadMarks() }
     window.addEventListener('fcc-checklist-updated', onUpdate)
     return () => {
@@ -219,13 +222,14 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ profiles }) => {
   useEffect(() => { syncRef.current = syncCalendar }, [syncCalendar])
   useEffect(() => {
     let cancelled = false
-    const run = () => {
+    const run = (force = false) => {
       if (cancelled) return
+      if (!force && (isInQuietHours() || document.hidden)) return
       void syncRef.current()
     }
-    run()
-    const interval = window.setInterval(run, 5 * 60 * 1000)
-    const onFocus = () => run()
+    run(true)
+    const interval = window.setInterval(() => run(), 5 * 60 * 1000)
+    const onFocus = () => run(true)
     window.addEventListener('focus', onFocus)
     return () => {
       cancelled = true

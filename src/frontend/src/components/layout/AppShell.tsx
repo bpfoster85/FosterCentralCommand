@@ -7,6 +7,7 @@ import {
   getFamilyName,
 } from '../../api/apiClient'
 import { syncCalendar } from '../../api/calendar'
+import { isInQuietHours } from '../../hooks/usePolling'
 import { useTheme } from '../../hooks/useTheme'
 
 const navItems = [
@@ -96,8 +97,10 @@ const useWeather = () => {
 
   useEffect(() => {
     fetchRef.current?.()
-    // Re-fetch every 15 minutes
-    const id = window.setInterval(() => fetchRef.current?.(), WEATHER_REFRESH_MS)
+    // Re-fetch every 15 minutes (suppressed during quiet hours or when hidden).
+    const id = window.setInterval(() => {
+      if (!isInQuietHours() && !document.hidden) fetchRef.current?.()
+    }, WEATHER_REFRESH_MS)
     return () => window.clearInterval(id)
   }, [])
 
