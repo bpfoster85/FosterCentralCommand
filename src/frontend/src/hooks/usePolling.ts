@@ -8,7 +8,6 @@ export const QUIET_HOURS_START = 23 // 11 PM
 export const QUIET_HOURS_END = 6 //  6 AM
 
 export const isInQuietHours = (date: Date = new Date()): boolean => {
-  if (QUIET_HOURS_START === QUIET_HOURS_END) return false
   const h = date.getHours()
   return QUIET_HOURS_START < QUIET_HOURS_END
     ? h >= QUIET_HOURS_START && h < QUIET_HOURS_END
