@@ -15,21 +15,24 @@ interface DashboardGridProps {
 
 // Top row (calendar + grocery) is sized to ~80% of the viewport so the chores
 // section below peeks just enough to hint that more content is scrollable.
-const TOP_ROWS = 7
-const SWEAR_JAR_ROWS = 2
+// Granularity bumped from 7 to 10 so a 1-row checklist cell lands near the
+// calendar header height (~52 px) without resizing the other right-column
+// widgets.
+const TOP_ROWS = 10
+const SWEAR_JAR_ROWS = 3
 const CHECKLIST_ROWS = 1
 const GROCERY_ROWS = TOP_ROWS - SWEAR_JAR_ROWS - CHECKLIST_ROWS
-const CHORES_ROWS = 8
+const CHORES_ROWS = 11
 
 const DEFAULT_LAYOUTS: DashboardLayout[] = [
-  { i: 'calendar', x: 0, y: 0, w: 10, h: TOP_ROWS, minW: 4, minH: 4 },
+  { i: 'calendar', x: 0, y: 0, w: 10, h: TOP_ROWS, minW: 4, minH: 6 },
   { i: 'checklist', x: 10, y: 0, w: 2, h: CHECKLIST_ROWS, minW: 2, minH: 1 },
   { i: 'swearJar', x: 10, y: CHECKLIST_ROWS, w: 2, h: SWEAR_JAR_ROWS, minW: 2, minH: 2 },
-  { i: 'grocery', x: 10, y: CHECKLIST_ROWS + SWEAR_JAR_ROWS, w: 2, h: GROCERY_ROWS, minW: 2, minH: 3 },
-  { i: 'chores', x: 0, y: TOP_ROWS, w: 12, h: CHORES_ROWS, minW: 6, minH: 4 },
+  { i: 'grocery', x: 10, y: CHECKLIST_ROWS + SWEAR_JAR_ROWS, w: 2, h: GROCERY_ROWS, minW: 2, minH: 4 },
+  { i: 'chores', x: 0, y: TOP_ROWS, w: 12, h: CHORES_ROWS, minW: 6, minH: 6 },
 ]
 
-const STORAGE_KEY = 'fcc_dashboard_layout_v7'
+const STORAGE_KEY = 'fcc_dashboard_layout_v8'
 
 const loadLayout = (): DashboardLayout[] => {
   try {
@@ -212,7 +215,7 @@ const DashboardGrid: React.FC<DashboardGridProps> = ({ profiles }) => {
           <div className="sky-widget sky-fade-in" style={{ minHeight: '15vh' }}>
             <DadsSwearJarWidget />
           </div>
-          <div className="sky-widget sky-fade-in" style={{ minHeight: '20vh' }}>
+          <div className="sky-widget sky-fade-in" style={{ minHeight: '56px' }}>
             <DashboardChecklistWidget />
           </div>
           <div className="sky-widget sky-fade-in" style={{ minHeight: '50vh' }}>
