@@ -1,10 +1,7 @@
-using Microsoft.Azure.Cosmos;
 using System.Text.Json.Serialization;
 using FosterCentralCommand.Api.Middleware;
-using FosterCentralCommand.Api.Models;
 using FosterCentralCommand.Api.Repositories;
-using FosterCentralCommand.Api.Repositories.Caching;
-using FosterCentralCommand.Api.Security;
+using FosterCentralCommand.Api.Repositories.Json;
 using FosterCentralCommand.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -43,331 +40,49 @@ builder.Services.AddCors(options =>
     });
 });
 
-// CosmosDB
-var cosmosOptions = builder.Configuration
-    .GetSection(CosmosDbOptions.SectionName)
-    .Get<CosmosDbOptions>() ?? new CosmosDbOptions();
+// JSON document store. The entire dataset lives in one JSON document that is
+// loaded into memory on startup and rewritten on every mutation. A Storage
+// connection string selects the durable Azure Blob backend; without one the
+// app falls back to a local file so it runs with zero cloud dependencies.
+var storeOptions = builder.Configuration
+    .GetSection(JsonStoreOptions.SectionName)
+    .Get<JsonStoreOptions>() ?? new JsonStoreOptions();
 
-builder.Services.AddSingleton(cosmosOptions);
-builder.Services.AddSingleton(_ => new CosmosClient(
-    cosmosOptions.AccountEndpoint,
-    cosmosOptions.AccountKey,
-    new CosmosClientOptions
-    {
-        SerializerOptions = new CosmosSerializationOptions
-        {
-            PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
-        }
-    }));
-// Cosmos repositories. Each per-family repo is registered as the concrete
-// CosmosXxxRepository, then exposed via its interface through a caching
-// decorator (CachedXxxRepository) so controllers and services transparently
-// hit IDistributedCache before falling back to Cosmos. Writes invalidate
-// the family's slice. The family repo itself is not cached — auth lookups
-// stay direct.
-builder.Services.AddScoped<CosmosProfileRepository>();
-builder.Services.AddScoped<CosmosShoppingListRepository>();
-builder.Services.AddScoped<CosmosGoalRepository>();
-builder.Services.AddScoped<CosmosChoreRepository>();
-builder.Services.AddScoped<IStarLedgerRepository, CosmosStarLedgerRepository>();
+builder.Services.AddSingleton(storeOptions);
+builder.Services.AddSingleton<IJsonStoreBackend>(_ => storeOptions.UsesAzureBlob
+    ? new AzureBlobJsonStoreBackend(storeOptions)
+    : new LocalFileJsonStoreBackend(storeOptions));
+builder.Services.AddSingleton<JsonDataStore>();
 
-builder.Services.AddScoped<IProfileRepository>(sp => new CachedProfileRepository(
-    sp.GetRequiredService<CosmosProfileRepository>(),
-    sp.GetRequiredService<FamilyCache>(),
-    sp.GetRequiredService<FamilyContext>()));
-builder.Services.AddScoped<IShoppingListRepository>(sp => new CachedShoppingListRepository(
-    sp.GetRequiredService<CosmosShoppingListRepository>(),
-    sp.GetRequiredService<FamilyCache>(),
-    sp.GetRequiredService<FamilyContext>()));
-builder.Services.AddScoped<IGoalRepository>(sp => new CachedGoalRepository(
-    sp.GetRequiredService<CosmosGoalRepository>(),
-    sp.GetRequiredService<FamilyCache>(),
-    sp.GetRequiredService<FamilyContext>()));
-builder.Services.AddScoped<IChoreRepository>(sp => new CachedChoreRepository(
-    sp.GetRequiredService<CosmosChoreRepository>(),
-    sp.GetRequiredService<FamilyCache>(),
-    sp.GetRequiredService<FamilyContext>()));
-
-builder.Services.AddScoped<IFamilyRepository, CosmosFamilyRepository>();
+// Repositories — each reads/writes the in-memory document. Per-family repos are
+// scoped because they depend on the request-scoped FamilyContext; the family
+// directory itself is global (used by login).
+builder.Services.AddScoped<IProfileRepository, JsonProfileRepository>();
+builder.Services.AddScoped<IShoppingListRepository, JsonShoppingListRepository>();
+builder.Services.AddScoped<IGoalRepository, JsonGoalRepository>();
+builder.Services.AddScoped<IChoreRepository, JsonChoreRepository>();
+builder.Services.AddScoped<IStarLedgerRepository, JsonStarLedgerRepository>();
+builder.Services.AddScoped<IFamilyRepository, JsonFamilyRepository>();
 
 // Per-request family context populated by FamilyContextMiddleware.
 builder.Services.AddScoped<FamilyContext>();
 
-// In-process distributed cache + per-family caching helper used by the
-// repository decorators above.
+// In-process cache used by CalendarService for Google Calendar event caching.
 builder.Services.AddDistributedMemoryCache();
-builder.Services.AddSingleton<FamilyCache>();
 
 // Services
 builder.Services.AddScoped<ICalendarService, CalendarService>();
 
 var app = builder.Build();
 
-// Initialize CosmosDB containers on startup
-using (var scope = app.Services.CreateScope())
-{
-    var cosmosClient = scope.ServiceProvider.GetRequiredService<CosmosClient>();
-    var options = scope.ServiceProvider.GetRequiredService<CosmosDbOptions>();
-    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    await CosmosInitializer.InitializeAsync(cosmosClient, options, logger);
-
-    // One-time migration: if no families exist yet but legacy Google config is
-    // present, seed a "Default" family from it so existing deployments keep
-    // working. The id is logged so the dev can plug it into the frontend.
-    var familyRepo = scope.ServiceProvider.GetRequiredService<IFamilyRepository>();
-    var existing = (await familyRepo.GetAllAsync()).ToList();
-    if (existing.Count == 0)
-    {
-        var calId = builder.Configuration["Google:CalendarId"];
-        var apiKey = builder.Configuration["Google:ApiKey"];
-        var saPath = builder.Configuration["Google:ServiceAccountKeyPath"];
-        string? saJson = null;
-        if (!string.IsNullOrEmpty(saPath) && File.Exists(saPath))
-        {
-            saJson = await File.ReadAllTextAsync(saPath);
-        }
-
-        if (!string.IsNullOrEmpty(calId) || !string.IsNullOrEmpty(apiKey) || !string.IsNullOrEmpty(saJson))
-        {
-            // Bootstrap password — read from config (Bootstrap:DefaultFamilyPassword)
-            // so the dev can override it via user-secrets. Falls back to a known
-            // dev value and the family password can be rotated via PUT /api/families.
-            var bootstrapPassword =
-                builder.Configuration["Bootstrap:DefaultFamilyPassword"] ?? "fostercc";
-
-            var seeded = await familyRepo.CreateAsync(new Family
-            {
-                Name = "Default",
-                NameNormalized = "default",
-                GoogleCalendarId = calId,
-                GoogleApiKey = apiKey,
-                GoogleServiceAccountJson = saJson,
-                PasswordHash = PasswordHasher.Hash(bootstrapPassword),
-            });
-            logger.LogInformation(
-                "Seeded default family {FamilyId}. Login with name=\"Default\" password=\"{Password}\".",
-                seeded.Id, bootstrapPassword);
-        }
-        else
-        {
-            logger.LogInformation(
-                "No families exist and no Google config available to seed one. Create a family via POST /api/families.");
-        }
-    }
-    else
-    {
-        // Backfill NameNormalized / PasswordHash for families created before
-        // login was added so existing families can still sign in.
-        foreach (var f in existing)
-        {
-            var dirty = false;
-            if (string.IsNullOrEmpty(f.NameNormalized) && !string.IsNullOrEmpty(f.Name))
-            {
-                f.NameNormalized = f.Name.Trim().ToLowerInvariant();
-                dirty = true;
-            }
-            if (string.IsNullOrEmpty(f.PasswordHash))
-            {
-                var bootstrapPassword =
-                    builder.Configuration["Bootstrap:DefaultFamilyPassword"] ?? "fostercc";
-                f.PasswordHash = PasswordHasher.Hash(bootstrapPassword);
-                dirty = true;
-                logger.LogWarning(
-                    "Family {FamilyId} ({Name}) had no password — seeded \"{Password}\". Rotate via PUT /api/families.",
-                    f.Id, f.Name, bootstrapPassword);
-            }
-            if (dirty) await familyRepo.UpdateAsync(f);
-        }
-    }
-
-    // Backfill FamilyId on legacy per-family resources (chores, profiles,
-    // goals, shopping lists) so the family-scoped repos can find them.
-    // Records with a missing/empty FamilyId are assigned to the first family,
-    // which preserves single-tenant deployments. Records that already have a
-    // FamilyId are left untouched.
-    var defaultFamilyId = existing
-        .Concat((await familyRepo.GetAllAsync()).ToList())
-        .Select(f => f.Id)
-        .FirstOrDefault();
-    if (!string.IsNullOrEmpty(defaultFamilyId))
-    {
-        var database = cosmosClient.GetDatabase(options.DatabaseName);
-
-        await BackfillFamilyIdAsync<Chore>(database.GetContainer(options.ChoresContainer), defaultFamilyId, logger);
-        await BackfillFamilyIdAsync<Profile>(database.GetContainer(options.ProfilesContainer), defaultFamilyId, logger);
-        await BackfillFamilyIdAsync<Goal>(database.GetContainer(options.GoalsContainer), defaultFamilyId, logger);
-        await BackfillFamilyIdAsync<ShoppingList>(database.GetContainer(options.ShoppingListsContainer), defaultFamilyId, logger);
-
-        await RemoveChoresByTitleAsync(
-            database.GetContainer(options.ChoresContainer),
-            defaultFamilyId,
-            "Analogy Activity",
-            logger);
-
-        await SeedChoresAsync(
-            database.GetContainer(options.ChoresContainer),
-            database.GetContainer(options.ProfilesContainer),
-            defaultFamilyId,
-            logger);
-    }
-}
+// Load the document into memory and run idempotent startup maintenance
+// (seed default family, backfill legacy records, seed default chores).
+var store = app.Services.GetRequiredService<JsonDataStore>();
+await store.InitializeAsync();
+await JsonDataSeeder.RunAsync(store, app.Configuration, app.Services.GetRequiredService<ILogger<Program>>());
 
 app.UseCors();
 app.UseMiddleware<FamilyContextMiddleware>();
 app.MapControllers();
 
 app.Run();
-
-// One-shot backfill: any item in <paramref name="container"/> with an empty
-// FamilyId is rewritten to belong to <paramref name="defaultFamilyId"/>.
-static async Task BackfillFamilyIdAsync<T>(Container container, string defaultFamilyId, ILogger logger)
-    where T : class
-{
-    var query = new QueryDefinition(
-        "SELECT * FROM c WHERE NOT IS_DEFINED(c.familyId) OR c.familyId = '' OR c.familyId = null");
-    using var iterator = container.GetItemQueryIterator<dynamic>(query);
-
-    var migrated = 0;
-    while (iterator.HasMoreResults)
-    {
-        var page = await iterator.ReadNextAsync();
-        foreach (var item in page)
-        {
-            string id = item.id;
-            item.familyId = defaultFamilyId;
-            await container.ReplaceItemAsync<dynamic>(item, id, new PartitionKey(id));
-            migrated++;
-        }
-    }
-
-    if (migrated > 0)
-    {
-        logger.LogInformation(
-            "Backfilled FamilyId on {Count} {Container} record(s) → family {FamilyId}.",
-            migrated, container.Id, defaultFamilyId);
-    }
-}
-
-// Idempotent chore seed: creates default chores for known profiles if they
-// do not already exist (matched by title + assignedProfileId).
-static async Task SeedChoresAsync(
-    Container choresContainer,
-    Container profilesContainer,
-    string familyId,
-    ILogger logger)
-{
-    // Load all profiles for this family.
-    var profileQuery = new QueryDefinition("SELECT c.id, c.name FROM c WHERE c.familyId = @fid")
-        .WithParameter("@fid", familyId);
-    using var profileIterator = profilesContainer.GetItemQueryIterator<dynamic>(profileQuery);
-    var profiles = new List<(string Id, string Name)>();
-    while (profileIterator.HasMoreResults)
-    {
-        var page = await profileIterator.ReadNextAsync();
-        foreach (var p in page)
-        {
-            string id = p.id;
-            string name = p.name;
-            profiles.Add((id, name));
-        }
-    }
-
-    if (profiles.Count == 0)
-    {
-        logger.LogInformation("SeedChores: no profiles found for family {FamilyId} — skipping.", familyId);
-        return;
-    }
-
-    // Load existing chores to enable idempotency check (title + profileId).
-    var choreQuery = new QueryDefinition("SELECT c.title, c.assignedProfileId FROM c WHERE c.familyId = @fid")
-        .WithParameter("@fid", familyId);
-    using var choreIterator = choresContainer.GetItemQueryIterator<dynamic>(choreQuery);
-    var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-    while (choreIterator.HasMoreResults)
-    {
-        var page = await choreIterator.ReadNextAsync();
-        foreach (var c in page)
-        {
-            string title = c.title;
-            string assignedId = c.assignedProfileId;
-            existing.Add($"{title.Trim().ToLowerInvariant()}|{assignedId}");
-        }
-    }
-
-    var today = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
-    var seeded = 0;
-
-    async Task CreateIfMissingAsync(string profileId, string title, int starValue)
-    {
-        var key = $"{title.Trim().ToLowerInvariant()}|{profileId}";
-        if (existing.Contains(key)) return;
-
-        var chore = new Chore
-        {
-            FamilyId = familyId,
-            Title = title,
-            AssignedProfileId = profileId,
-            StarValue = starValue,
-            DueDate = today,
-            Recurrence = ChoreRecurrence.Daily,
-        };
-        await choresContainer.CreateItemAsync(chore, new PartitionKey(chore.Id));
-        existing.Add(key);
-        seeded++;
-    }
-
-    // Chores for Sarah only.
-    var sarah = profiles.FirstOrDefault(p =>
-        string.Equals(p.Name.Trim(), "Sarah", StringComparison.OrdinalIgnoreCase));
-    if (sarah != default)
-    {
-        await CreateIfMissingAsync(sarah.Id, "Work Out", starValue: 2);
-        await CreateIfMissingAsync(sarah.Id, "Read Book", starValue: 1);
-    }
-    else
-    {
-        logger.LogWarning("SeedChores: profile 'Sarah' not found — skipping Sarah-specific chores.");
-    }
-
-    if (seeded > 0)
-        logger.LogInformation("SeedChores: created {Count} new chore(s) for family {FamilyId}.", seeded, familyId);
-}
-
-// Idempotent cleanup: removes every chore in <paramref name="container"/> for
-// the given family whose title matches <paramref name="title"/> (case-insensitive).
-static async Task RemoveChoresByTitleAsync(
-    Container container,
-    string familyId,
-    string title,
-    ILogger logger)
-{
-    var query = new QueryDefinition(
-            "SELECT c.id FROM c WHERE c.familyId = @fid AND LOWER(c.title) = @title")
-        .WithParameter("@fid", familyId)
-        .WithParameter("@title", title.Trim().ToLowerInvariant());
-
-    using var iterator = container.GetItemQueryIterator<dynamic>(query);
-    var removed = 0;
-    while (iterator.HasMoreResults)
-    {
-        var page = await iterator.ReadNextAsync();
-        foreach (var item in page)
-        {
-            string id = item.id;
-            try
-            {
-                await container.DeleteItemAsync<dynamic>(id, new PartitionKey(id));
-                removed++;
-            }
-            catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                // Already gone.
-            }
-        }
-    }
-
-    if (removed > 0)
-        logger.LogInformation(
-            "Removed {Count} chore(s) titled '{Title}' from family {FamilyId}.",
-            removed, title, familyId);
-}

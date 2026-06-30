@@ -5,4 +5,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/FosterCentralCommand.Api.Tests/FosterCentralCommand.Api.Tests.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/CosmosToBlobMigrator/CosmosToBlobMigrator.csproj" />
+  </Folder>
 </Solution>

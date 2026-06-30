@@ -11,9 +11,8 @@ A Progressive Web Application (PWA) family command center featuring a Google Cal
 | Calendar | FullCalendar + Google Calendar API |
 | Dashboard | react-grid-layout (drag & resize) |
 | Backend | .NET 10 Web API |
-| ORM | Entity Framework Core |
-| Database | PostgreSQL |
-| Cache | Azure Cache for Redis |
+| Data store | Single JSON document — Azure Blob Storage (cloud) / local file (dev) |
+| Caching | In-memory (JSON document loaded once on startup) |
 | Container | Docker |
 | Hosting | Azure Container Apps |
 
@@ -38,10 +37,13 @@ FosterCentralCommand/
 │   ├── api/
 │   │   └── FosterCentralCommand.Api/    # .NET Web API
 │   │       ├── Controllers/             # REST controllers
-│   │       ├── Data/                    # EF Core DbContext + Migrations
 │   │       ├── DTOs/                    # Request/response models
-│   │       ├── Models/                  # EF Core entities
-│   │       └── Services/               # CalendarService (Google + Redis)
+│   │       ├── Models/                  # Domain models + JsonDataDocument (the aggregate)
+│   │       ├── Repositories/            # 6 repository interfaces + Json/ implementations
+│   │       │   └── Json/                # JsonDataStore (cache + concurrency) + per-entity repos
+│   │       └── Services/                # CalendarService (Google Calendar + in-memory cache)
+│   ├── tools/
+│   │   └── CosmosToBlobMigrator/        # One-time Cosmos → Blob JSON export tool
 
 │   └── FosterCentralCommand.slnx        # .NET solution file
 └── Dockerfile                           # API container image (multi-stage, .NET 10)
@@ -59,7 +61,7 @@ FosterCentralCommand/
 - Syncs with **Google Calendar** (public or service account)
 - Views: **Month, Week, Day, Agenda (List)**
 - **Filter by family profile** (linked via email address)
-- Near-real-time updates via **Redis cache** (refreshed every 5 minutes)
+- Near-real-time updates via an **in-memory cache** (refreshed every 5 minutes)
 - Event detail popup
 
 ### Lists (Todo + Reminders)
@@ -81,9 +83,12 @@ FosterCentralCommand/
 - Node.js 20+
 - .NET 10 SDK
 - Docker (for building the API container image)
-- PostgreSQL 16
-- Redis (or Docker)
 - Google Calendar API key (optional, for calendar sync)
+
+> **No database to install.** In development the API persists to a local JSON
+> file (`data/fostercc.json` by default), so it runs with zero external
+> dependencies. In the cloud it persists the same JSON document to Azure Blob
+> Storage. See [Data storage & backups](#data-storage--backups).
 
 ### Run the Frontend
 
@@ -105,12 +110,19 @@ dotnet run
 
 API runs at http://localhost:5076
 
+With no `BlobStore__ConnectionString` configured (the default in
+`appsettings.Development.json`), the API uses the **local file backend** and
+writes all data to `data/fostercc.json` under the API project. Delete that file
+to start from an empty store.
+
 ### Environment Variables
 
 | Variable | Description |
 |---|---|
-| `ConnectionStrings__DefaultConnection` | PostgreSQL connection string |
-| `ConnectionStrings__Redis` | Redis connection string |
+| `BlobStore__ConnectionString` | Azure Storage connection string. **When set**, data persists to Blob Storage; when empty, the API uses the local file backend. |
+| `BlobStore__ContainerName` | Blob container holding the data document (default `fostercc`). |
+| `BlobStore__BlobName` | Blob name for the JSON document (default `data.json`). |
+| `BlobStore__LocalFilePath` | Path used by the local file backend when no connection string is set (default `data/fostercc.json`). |
 | `Google__CalendarId` | Google Calendar ID to sync |
 | `Google__ApiKey` | Google API Key with Calendar API enabled |
 
@@ -124,15 +136,68 @@ docker build -t fostercentralcommand-api:local .
 
 # Run locally — pass config via env vars (double underscores map to nested keys)
 docker run --rm -p 8080:8080 \
-  -e CosmosDb__AccountEndpoint='https://<your-cosmos>.documents.azure.com:443/' \
-  -e CosmosDb__AccountKey='<key>' \
-  -e ConnectionStrings__Redis='<host>:6380,password=<key>,ssl=true' \
+  -e BlobStore__ConnectionString='DefaultEndpointsProtocol=https;AccountName=<acct>;AccountKey=<key>;EndpointSuffix=core.windows.net' \
+  -e BlobStore__ContainerName='fostercc' \
+  -e BlobStore__BlobName='data.json' \
   -e Google__CalendarId='<calendar-id>' \
   -e Google__ApiKey='<api-key>' \
   fostercentralcommand-api:local
 ```
 
 The image runs as the non-root `app` user provided by the `mcr.microsoft.com/dotnet/aspnet:10.0` base image and is suitable for hosting in Azure Container Apps, ACI, AKS, or any other container runtime.
+
+## Data storage & backups
+
+All application data (families, profiles, lists, goals, chores, star ledger) is
+stored as a **single JSON document**. On startup the API loads it into memory
+once; every mutation rewrites the whole document. At this scale (a handful of
+records per family) this is fast and removes the need for a database.
+
+**Backends** (selected automatically by configuration):
+
+| Environment | Backend | Where data lives |
+|---|---|---|
+| Cloud (Container Apps) | Azure Blob Storage | blob `data.json` in container `fostercc` |
+| Local dev | Local file | `data/fostercc.json` under the API project |
+
+The backend is **Azure Blob Storage whenever `BlobStore__ConnectionString` is
+set**, otherwise it falls back to the local file. Concurrency is handled with
+Blob **ETag** optimistic locking: if two writers race, the loser reloads the
+latest document and replays its change. The deploy workflow pins the Container
+App to **`--max-replicas 1`** so the in-memory cache stays the single source of
+truth; the ETag check is the safety net during deploy overlap.
+
+### Backups
+
+Enable **Blob versioning** on the storage account (Storage account → Data
+management → Data protection → *Enable versioning for blobs*). Every write then
+produces a new immutable version of `data.json`, so restoring a previous state
+is a point-and-click "promote previous version" — no separate backup job
+needed. You can also just download `data.json` at any time for an offline copy.
+
+### One-time migration from Cosmos DB
+
+If you are cutting over from the previous Azure Cosmos DB deployment, run the
+`CosmosToBlobMigrator` tool **once** to export the live Cosmos data into the new
+JSON document before (or at) cutover:
+
+```bash
+cd src/tools/CosmosToBlobMigrator
+
+dotnet run -- \
+  --CosmosDb:AccountEndpoint='https://<your-cosmos>.documents.azure.com:443/' \
+  --CosmosDb:AccountKey='<cosmos-key>' \
+  --CosmosDb:DatabaseName='fostercc' \
+  --BlobStore:ConnectionString='DefaultEndpointsProtocol=https;AccountName=<acct>;AccountKey=<key>;EndpointSuffix=core.windows.net' \
+  --BlobStore:ContainerName='fostercc' \
+  --BlobStore:BlobName='data.json'
+```
+
+The tool reads every Cosmos container, builds the aggregate JSON document, and
+writes it to the configured backend (Blob Storage, or a local file if no
+connection string is given). It overwrites the target document, so run it
+against an empty/new blob. After verifying the app reads the migrated data, the
+Cosmos account can be decommissioned.
 
 ## PWA Install
 
