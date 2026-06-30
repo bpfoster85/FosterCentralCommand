@@ -1,9 +1,10 @@
 # Manually-triggered build & deploy of the FosterCentralCommand API to Azure Container Apps.
 #
 # Required GitHub repository secrets:
-#   AZURE_CREDENTIALS         - Service-principal JSON from `az ad sp create-for-rbac --sdk-auth`
-#   COSMOS_ACCOUNT_ENDPOINT   - e.g. https://cdbfostercentralcommand.documents.azure.com:443/
-#   COSMOS_ACCOUNT_KEY        - Cosmos primary key
+#   AZURE_CREDENTIALS          - Service-principal JSON from `az ad sp create-for-rbac --sdk-auth`
+#   STORAGE_CONNECTION_STRING  - Connection string for the Azure Storage account that holds the
+#                                single JSON data blob (Storage account > Security + networking >
+#                                Access keys). Enable Blob versioning on this account for backups.
 #
 # The service principal in AZURE_CREDENTIALS needs these RBAC roles:
 #   - "AcrPush"                       on ACR  acrfoster
@@ -44,9 +45,8 @@ env:
   CONTAINER_APP_NAME: aca-familycalendar
   IMAGE_REPOSITORY: fostercc-api
   TARGET_PORT: "8080"
-  COSMOS_DATABASE_NAME: fostercc
-  COSMOS_PROFILES_CONTAINER: profiles
-  COSMOS_SHOPPING_LISTS_CONTAINER: shoppingLists
+  BLOB_CONTAINER_NAME: fostercc
+  BLOB_NAME: data.json
 
 jobs:
   build-and-deploy:
@@ -124,8 +124,7 @@ jobs:
         shell: bash
         env:
           IMAGE: ${{ steps.tag.outputs.image }}
-          COSMOS_ACCOUNT_ENDPOINT: ${{ secrets.COSMOS_ACCOUNT_ENDPOINT }}
-          COSMOS_ACCOUNT_KEY: ${{ secrets.COSMOS_ACCOUNT_KEY }}
+          STORAGE_CONNECTION_STRING: ${{ secrets.STORAGE_CONNECTION_STRING }}
           CORS_PAIRS: ${{ steps.cors.outputs.pairs }}
         run: |
           set -euo pipefail
@@ -158,21 +157,22 @@ jobs:
               --name "$CONTAINER_APP_NAME" \
               --resource-group "$AZURE_RESOURCE_GROUP" \
               --secrets \
-                cosmos-account-endpoint="$COSMOS_ACCOUNT_ENDPOINT" \
-                cosmos-account-key="$COSMOS_ACCOUNT_KEY" \
+                storage-connection-string="$STORAGE_CONNECTION_STRING" \
               --output none
 
+            # Pin to a single replica so the in-memory JSON cache is the single
+            # source of truth; Blob ETag concurrency still covers deploy overlap.
             # shellcheck disable=SC2086
             az containerapp update \
               --name "$CONTAINER_APP_NAME" \
               --resource-group "$AZURE_RESOURCE_GROUP" \
               --image "$IMAGE" \
+              --min-replicas 0 \
+              --max-replicas 1 \
               --set-env-vars \
-                CosmosDb__AccountEndpoint=secretref:cosmos-account-endpoint \
-                CosmosDb__AccountKey=secretref:cosmos-account-key \
-                CosmosDb__DatabaseName="$COSMOS_DATABASE_NAME" \
-                CosmosDb__ProfilesContainer="$COSMOS_PROFILES_CONTAINER" \
-                CosmosDb__ShoppingListsContainer="$COSMOS_SHOPPING_LISTS_CONTAINER" \
+                BlobStore__ConnectionString=secretref:storage-connection-string \
+                BlobStore__ContainerName="$BLOB_CONTAINER_NAME" \
+                BlobStore__BlobName="$BLOB_NAME" \
                 $CORS_PAIRS \
               --output none
           else
@@ -190,17 +190,14 @@ jobs:
               --registry-username "$REGISTRY_USERNAME" \
               --registry-password "$REGISTRY_PASSWORD" \
               --secrets \
-                cosmos-account-endpoint="$COSMOS_ACCOUNT_ENDPOINT" \
-                cosmos-account-key="$COSMOS_ACCOUNT_KEY" \
+                storage-connection-string="$STORAGE_CONNECTION_STRING" \
               --env-vars \
-                CosmosDb__AccountEndpoint=secretref:cosmos-account-endpoint \
-                CosmosDb__AccountKey=secretref:cosmos-account-key \
-                CosmosDb__DatabaseName="$COSMOS_DATABASE_NAME" \
-                CosmosDb__ProfilesContainer="$COSMOS_PROFILES_CONTAINER" \
-                CosmosDb__ShoppingListsContainer="$COSMOS_SHOPPING_LISTS_CONTAINER" \
+                BlobStore__ConnectionString=secretref:storage-connection-string \
+                BlobStore__ContainerName="$BLOB_CONTAINER_NAME" \
+                BlobStore__BlobName="$BLOB_NAME" \
                 $CORS_PAIRS \
               --min-replicas 0 \
-              --max-replicas 2 \
+              --max-replicas 1 \
               --cpu 0.5 \
               --memory 1.0Gi \
               --output none

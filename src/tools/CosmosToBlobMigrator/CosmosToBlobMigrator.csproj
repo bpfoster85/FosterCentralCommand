@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>FosterCentralCommand.Tools.CosmosToBlobMigrator</RootNamespace>
+    <AssemblyName>CosmosToBlobMigrator</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The API no longer references Cosmos; the one-shot migrator carries it. -->
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.59.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reuse the API's models + JSON store backends so the output matches the
+         exact shape the running app reads. -->
+    <ProjectReference Include="..\..\api\FosterCentralCommand.Api\FosterCentralCommand.Api.csproj" />
+  </ItemGroup>
+
+</Project>

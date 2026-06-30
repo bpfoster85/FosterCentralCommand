@@ -8,8 +8,8 @@ namespace FosterCentralCommand.Api.Models;
 /// the middleware looks the family up and attaches it to the request scope.
 ///
 /// Google Calendar credentials are stored per-family so each family can connect
-/// their own calendar without sharing keys. Cosmos encrypts items at rest, but
-/// these fields should still be treated as sensitive.
+/// their own calendar without sharing keys. These fields should be treated as
+/// sensitive.
 /// </summary>
 public class Family
 {

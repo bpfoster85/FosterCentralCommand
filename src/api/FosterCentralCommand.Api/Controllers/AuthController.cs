@@ -49,8 +49,8 @@ public class AuthController(
     }
 
     /// <summary>
-    /// Verify a family name + that family's admin password (stored hashed in
-    /// Cosmos as <c>Family.AdminPasswordHash</c>). When no admin password is
+    /// Verify a family name + that family's admin password (stored hashed
+    /// as <c>Family.AdminPasswordHash</c>). When no admin password is
     /// set yet, returns 409 with <c>needsSetup: true</c> so the client can
     /// prompt the family-authed user to set one via <see cref="AdminSetPassword"/>.
     /// </summary>
